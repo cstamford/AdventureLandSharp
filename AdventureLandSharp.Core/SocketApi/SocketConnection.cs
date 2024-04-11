@@ -61,8 +61,6 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         // 5. Wait for "start" from server.
         _socketIo = new($"http://{settings.Server.Addr}:{settings.Server.Port}");
 
-        // Note: welcome will give us server and map info, but this is for the spectator.
-        // It has nothing to do with our characters or location, so we just ignore it.
         _socketIo.On("welcome", async _ => {
             await _socketIo.EmitAsync("loaded", new Outbound.Loaded(
                 Success: true,
@@ -71,7 +69,6 @@ public class Connection(ConnectionSettings settings) : IDisposable {
                 Scale: 2));
         });
 
-        // Basically contains a snapshot of the game state.
         _socketIo.On("entities", async e => {
             if (!_authenticated) {
                 await _socketIo.EmitAsync("auth", new Outbound.Auth(
@@ -89,15 +86,21 @@ public class Connection(ConnectionSettings settings) : IDisposable {
             }
         });
 
-        // Identical to player, but called once at the very start.
         _socketIo.On("start", e => {
             OnConnected?.Invoke(e.GetValue<Dictionary<string, JsonElement>>());
             _ready = true;
         });
 
-        // Kick off the connection process.
+        _socketIo.OnDisconnected += (_, e) => HandleError("_socketIo.OnDisconnected", e);
+        _socketIo.OnError += (_, e) => HandleError("_socketIo.OnError", e);
+
         _socketIo.ConnectAsync();
         _connected = true;
+    }
+
+    private void HandleError(string type, object e) {
+        Log.Error($"{type}: {e}");
+        CloseExistingConnection();
     }
 
     private void CloseExistingConnection() {

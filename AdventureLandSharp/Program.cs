@@ -47,16 +47,36 @@ while (true) {
 
     DebugGui gui = new(world, socket);
 
-    IEnumerable<IMapGraphEdge> pathToMain = world.FindRoute(
+    IEnumerable<IMapGraphEdge> path = world.FindRoute(
         new(world.GetMap(socket.Player.Map), socket.Player.Position),
         new(world.GetMap("halloween"), new(8, 630)));
 
-    PlayerGraphTraversal traversal = new(socket, new(pathToMain));
+    PlayerGraphTraversal traversal = GetRandomTraversal(socket);
 
     while (socket.Connected) {
         socket.Update();
         traversal.Update();
         gui.Update();
+
+        if (traversal.Finished) {
+            traversal = GetRandomTraversal(socket);
+        }
+
         Thread.Yield();
     }
+}
+
+PlayerGraphTraversal GetRandomTraversal(Socket socket) {
+    MapLocation[] interestingGoals = [
+        new(world.GetMap("halloween"), new(8, 630)),
+        new(world.GetMap("main"), new(-1184, 781)),
+        new(world.GetMap("desertland"), new(-669, 315)),
+        new(world.GetMap("winterland"), new(1245, -1490)),
+    ];
+
+    SocketEntityData player = socket.Player;
+
+    return new(socket, world.FindRoute(
+        new(world.GetMap(player.Map), player.Position),
+        interestingGoals[Random.Shared.Next(interestingGoals.Length)]));
 }

@@ -91,10 +91,19 @@ public class MapGrid {
     public bool IsWithinBounds(MapGridCell pos) => pos.X >= 0 && pos.X < _width && pos.Y >= 0 && pos.Y < _height;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsWithinBounds(Vector2 pos) => IsWithinBounds(WorldToGrid(pos));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsWalkable(MapGridCell pos) => IsWithinBounds(pos) && _terrain[pos.X, pos.Y].Walkable;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsWalkable(Vector2 pos) => IsWalkable(WorldToGrid(pos));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float Cost(MapGridCell pos) => IsWithinBounds(pos) ? _terrain[pos.X, pos.Y].Cost : float.MaxValue;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float Cost(Vector2 pos) => Cost(WorldToGrid(pos));
 
     public MapGridPath IntraMap_AStar(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) =>
         IntraMap_AStar(WorldToGrid(start), WorldToGrid(goal), settings);
@@ -102,6 +111,10 @@ public class MapGrid {
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGridPath IntraMap_AStar(MapGridCell start, MapGridCell goal, MapGridPathSettings? settings = null) {
         Debug.Assert(IsWalkable(start) && IsWalkable(goal), "IntraMap_AStar requires start and goal to be walkable.");
+
+        if (start == goal) {
+            return new(0, []);
+        }
 
         MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
         IReadOnlyDictionary<MapGridCell, float> dynamicCosts = settings?.DynamicCosts ?? new Dictionary<MapGridCell, float>();
@@ -143,7 +156,6 @@ public class MapGrid {
         }
 
         List<MapGridCell> backtrackPath = [];
-
         MapGridCell backtrackPos = goal;
 
         while (backtrack.TryGetValue(backtrackPos, out MapGridCell backtrackPrevPos)) {
@@ -162,30 +174,28 @@ public class MapGrid {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public MapGridCell FindNearestWalkable(MapGridCell start) {
+    public MapGridCell FindNearestWalkable(MapGridCell start, MapGridPathSettings? settings = null) {
         if (IsWalkable(start)) {
             return start;
         }
 
-        Queue<MapGridCell> queue = [];
-        HashSet<MapGridCell> visited = [];
+        MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
+        PriorityQueue<MapGridCell, float> queue = new();
+        HashSet<MapGridCell> closed = [];
 
-        queue.Enqueue(start);
-        visited.Add(start);
+        queue.Enqueue(start, 0);
+        closed.Add(start);
 
-        while (queue.Count > 0) {
-            MapGridCell current = queue.Dequeue();
-
-            if (IsWalkable(current)) {
-                return current;
+        while (queue.TryDequeue(out MapGridCell pos, out _)) {
+            if (IsWalkable(pos)) {
+                return pos;
             }
 
             foreach (MapGridCell offset in _neighbourOffsets) {
-                MapGridCell neighbour = new(current.X + offset.X, current.Y + offset.Y);
-
-                if (!visited.Contains(neighbour)) {
-                    queue.Enqueue(neighbour);
-                    visited.Add(neighbour);
+                MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
+                if (!closed.Contains(neighbour)) {
+                    queue.Enqueue(neighbour, neighbour.Cost(start, heuristic));
+                    closed.Add(neighbour);
                 }
             }
         }
@@ -207,7 +217,9 @@ public class MapGrid {
         int err = dx - dy;
 
         while (true) {
-            if (!IsWalkable(new(x0, y0))) {
+            MapGridCell cur = new(x0, y0);
+            
+            if (!IsWalkable(cur)) {
                 return false;
             }
 
@@ -245,13 +257,13 @@ public class MapGrid {
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static MapGridCell WorldToGrid(GameLevelGeometry geo, Vector2 pos) => new(
-        (int)MathF.Round((pos.X - geo.MinX) / CellSize - 0.5f), 
-        (int)MathF.Round((pos.Y - geo.MinY) / CellSize - 0.5f));
+        (int)MathF.Round((pos.X - geo.MinX) / CellSize), 
+        (int)MathF.Round((pos.Y - geo.MinY) / CellSize));
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static Vector2 GridToWorld(GameLevelGeometry geo, MapGridCell pos) => new(
-        pos.X * CellSize + CellSize/2 + geo.MinX,
-        pos.Y * CellSize + CellSize/2 + geo.MinY);
+        geo.MinX + pos.X * CellSize,
+        geo.MinY + pos.Y * CellSize);
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static MapGridCellData[,] CreateTerrain(GameDataMap map, GameLevelGeometry geo) {

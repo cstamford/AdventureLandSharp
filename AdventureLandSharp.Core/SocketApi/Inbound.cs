@@ -158,7 +158,7 @@ public static class Inbound {
     public readonly record struct NewMapData(
         [property: JsonPropertyName("direction")] double? Direction,
         [property: JsonPropertyName("entities")] EntitiesData Entities,
-        [property: JsonPropertyName("m")] double MapId,
+        [property: JsonPropertyName("m")] long MapId,
         [property: JsonPropertyName("name")] string MapName,
         [property: JsonPropertyName("x")] double PlayerX,
         [property: JsonPropertyName("y")] double PlayerY

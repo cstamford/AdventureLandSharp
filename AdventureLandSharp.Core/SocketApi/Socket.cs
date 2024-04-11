@@ -13,7 +13,16 @@ public class Socket : IDisposable {
     public event Action<string, object>? OnRecv;
 
     public SocketEntityData Player => _player.Data;
-    public ISocketEntityMovementPlan? PlayerMovementPlan { get; set; }
+    public ISocketEntityMovementPlan? PlayerMovementPlan { 
+        get => _playerMovementPlan;
+        set {
+            if (value == null) {
+                _player.TargetPosition = null;
+                _player.Moving = false;
+            }
+            _playerMovementPlan = value;
+        }
+    }
     public SocketPlayerInventory PlayerInventory => _playerInventory;
     public SocketPlayerEquipment PlayerEquipment => _playerEquipment;
     public IEnumerable<SocketEntityData> Entities => _entities.Values.Select(x => x.Data);
@@ -163,7 +172,7 @@ public class Socket : IDisposable {
                 TargetY: _player.TargetPosition.Value.Y,
                 MapId: _player.MapId));
 
-            _playerMoveUpdateLast += playerMoveInterval;
+            _playerMoveUpdateLast = now;
 
             if (_player.TargetPosition == _player.Position) {
                 _player.TargetPosition = null;
@@ -185,6 +194,7 @@ public class Socket : IDisposable {
     private List<string> _party = [];
 
     private readonly SocketEntity _player = new();
+    private ISocketEntityMovementPlan? _playerMovementPlan;
     private SocketPlayerInventory _playerInventory = new(0, []);
     private SocketPlayerEquipment _playerEquipment;
 
@@ -288,7 +298,11 @@ public class Socket : IDisposable {
     private void Recv(Inbound.NewMapData evt) {
         Debug.Assert(evt.Entities.Type == "all");
         Recv(evt.Entities);
+
+        _player.Map = evt.MapName;
+        _player.MapId = evt.MapId;
         _player.Position = new((float)evt.PlayerX, (float)evt.PlayerY);
+        _player.TargetPosition = null;
     }
 
     private void Recv(Inbound.PartyRequestData evt) {
