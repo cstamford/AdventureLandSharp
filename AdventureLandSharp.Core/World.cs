@@ -24,10 +24,7 @@ public class World {
     public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGridHeuristic? heuristic = null) {
         start = new(start.Map, start.Map.FindNearestWalkable(start.Location));
         goal = new(goal.Map, goal.Map.FindNearestWalkable(goal.Location));
-
-        return start.Map == goal.Map ?
-            start.Map.FindPath(start.Location, goal.Location, heuristic) :
-            _mapsGraph.InterMap_Djikstra(start, goal, heuristic ?? new MapGridPathSettings().Heuristic);
+        return _mapsGraph.InterMap_Djikstra(start, goal, heuristic ?? new MapGridPathSettings().Heuristic);
     }
 
     public Map GetMap(string mapName) => _maps[mapName];

@@ -68,8 +68,6 @@ public class MapGraph {
     }
 
     public List<IMapGraphEdge> InterMap_Djikstra(MapLocation start, MapLocation goal, MapGridHeuristic heuristic) {
-        Debug.Assert(start.Map != goal.Map, "InterMap_Djikstra requires start and goal to be on different maps.");
-
         PriorityQueue<MapLocation, float> Q = new();
         Dictionary<MapLocation, float> dist = [];
         Dictionary<MapLocation, IMapGraphEdge> prev = [];
@@ -93,12 +91,14 @@ public class MapGraph {
         dist[start] = 0;
         Q.Enqueue(start, 0);
 
-        while (Q.TryDequeue(out MapLocation u, out float _) && u != goal) {
+        while (Q.TryDequeue(out MapLocation u, out float _)) {
             IEnumerable<IMapGraphEdge> neighbors = _edges.TryGetValue(u, out List<IMapGraphEdge>? edges) ? edges : [];
 
             if (u == start) {
                 neighbors = neighbors.Concat(startToFirstVertex);
-            } else if (u.Map == goal.Map) {
+            }
+            
+            if (u.Map == goal.Map) {
                 neighbors = neighbors.Concat(lastVertexToGoal);
             }
 
