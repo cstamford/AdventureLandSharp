@@ -19,6 +19,7 @@ public class World {
 
     public GameData Data => _data;
     public IEnumerable<KeyValuePair<string, Map>> Maps => _maps;
+    public MapGraph MapsGraph => _mapsGraph;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGridHeuristic? heuristic = null) {

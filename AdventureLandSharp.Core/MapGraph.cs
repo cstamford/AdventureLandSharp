@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Numerics;
 
 namespace AdventureLandSharp.Core;
@@ -30,6 +29,9 @@ public readonly record struct MapGraphEdgeTeleport(MapLocation Source, MapLocati
 }
 
 public class MapGraph {
+    public IEnumerable<MapLocation> Vertices => _vertices;
+    public IReadOnlyDictionary<MapLocation, HashSet<IMapGraphEdge>> Edges => _edges;
+
     public MapGraph(IReadOnlyDictionary<string, Map> maps) {
         // Add a vertex for every connection point between areas, and add an edge between each connection.
         foreach (MapConnection connection in maps.SelectMany(x => x.Value.Connections)) {
