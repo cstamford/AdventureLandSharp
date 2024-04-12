@@ -26,12 +26,12 @@ public class PlayerGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edge
         }
     }
     
-    private SocketEntityData Player => socket.Player;
+    private LocalPlayer Player => socket.Player;
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
 
     private bool CurrentEdgeFinished => _edge != null && _edge switch { 
         MapGraphEdgeInterMap interMap => 
-            Player.Map == interMap.Dest.Map.Name,
+            Player.MapName == interMap.Dest.Map.Name,
         MapGraphEdgeIntraMap intraMap => 
             Equivalent(Player.Position, intraMap.Dest.Location) || 
             Equivalent(Player.Position, _edge.Dest.Map.FindNearestWalkable(_edge.Dest.Location)),
@@ -65,12 +65,12 @@ public class PlayerGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edge
                 throw new NotImplementedException($"Unknown inter-map edge type: {interMap.Type}");
             }
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
-            if (socket.PlayerMovementPlan == null) {
+            if (Player.MovementPlan == null) {
                 int closestPointToUsIdx = intraMap.Path.FindIndex(p => Equivalent(p, Player.Position));
                 if (closestPointToUsIdx != -1) {
                     intraMap.Path.RemoveRange(0, closestPointToUsIdx);
                 }
-                socket.PlayerMovementPlan = new PathMovementPlan(Player.Position, new(intraMap.Path));
+                Player.MovementPlan = new PathMovementPlan(Player.Position, new(intraMap.Path));
             }
         } else if (_edge is MapGraphEdgeTeleport) {
             EmitAndClearMovement<Outbound.Town>(new());
@@ -81,7 +81,6 @@ public class PlayerGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edge
 
     private void EmitAndClearMovement<T>(T data) where T: struct {
         socket.Emit(data);
-        socket.PlayerMovementPlan = null;
+        Player.MovementPlan = null;
     }
-
 }

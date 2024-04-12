@@ -19,34 +19,35 @@ public class DebugGui {
         Raylib.BeginDrawing();
         Raylib.ClearBackground(Color.DarkGray);
 
-        SocketEntityData player = _socket.Player;
+        LocalPlayer player = _socket.Player;
 
         _cam.Offset = new(Raylib.GetRenderWidth() / 2.0f, Raylib.GetRenderHeight() / 2.0f);
         _cam.Target = player.Position;
         Raylib.BeginMode2D(_cam);
 
-        Map map = _world.GetMap(player.Map);
+        Map map = _world.GetMap(player.MapName);
         DrawMapGrid(map);
         DrawMapBoundaries(map);
 
-        foreach (SocketEntityData entity in _socket.Entities) {
-            Raylib.DrawCircle(
-                (int)entity.Position.X,
-                (int)entity.Position.Y,
-                4,
-                entity.Type == SocketEntityType.Player ? Color.Yellow : Color.Red);
+        foreach (Entity e in _socket.Entities) {
+            Color col = e switch { 
+                Npc => Color.White,
+                Monster => Color.Red,
+                Player => Color.Purple,
+                _ => throw new()
+            };
 
-            Raylib.DrawText(
-                entity.Type == SocketEntityType.Player ? entity.Id : entity.TypeString,
-                (int)entity.Position.X,
-                (int)entity.Position.Y + 16,
-                32,
-                Color.White);
+            if (e.MovementPlan != null) {
+                Raylib.DrawLine((int)e.Position.X, (int)e.Position.Y, (int)e.MovementPlan.Goal.X, (int)e.MovementPlan.Goal.Y, col);
+            }
+
+            Raylib.DrawCircle((int)e.Position.X, (int)e.Position.Y, 4, col);
+            Raylib.DrawText(e.Name, (int)e.Position.X, (int)e.Position.Y - 16, 12, col);
         }
 
         Raylib.DrawCircle((int)player.Position.X, (int)player.Position.Y, 4, Color.SkyBlue);
 
-        if (_socket.PlayerMovementPlan is PathMovementPlan pathPlan) {
+        if (player.MovementPlan is PathMovementPlan pathPlan) {
             DrawPath([.. pathPlan.Path], Color.Green);
         }
 

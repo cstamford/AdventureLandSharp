@@ -4,8 +4,6 @@ using AdventureLandSharp.Core.HttpApi;
 using AdventureLandSharp.Core.Util;
 using AdventureLandSharp;
 
-using HttpClient http = new();
-
 const string serverAddr = "localhost:8083";
 const string user = "dev";
 const string pass = "dev";
@@ -48,25 +46,25 @@ while (true) {
     DebugGui gui = new(world, socket);
 
     IEnumerable<IMapGraphEdge> path = world.FindRoute(
-        new(world.GetMap(socket.Player.Map), socket.Player.Position),
+        new(world.GetMap(socket.Player.MapName), socket.Player.Position),
         new(world.GetMap("halloween"), new(8, 630)));
 
-    PlayerGraphTraversal traversal = GetRandomTraversal(socket);
+    PlayerGraphTraversal traversal = GetRandomTraversal(world, socket);
 
     while (socket.Connected) {
         socket.Update();
         traversal.Update();
-        gui.Update();
 
         if (traversal.Finished) {
-            traversal = GetRandomTraversal(socket);
+            traversal = GetRandomTraversal(world, socket);
         }
 
+        gui.Update();
         Thread.Yield();
     }
 }
 
-PlayerGraphTraversal GetRandomTraversal(Socket socket) {
+static PlayerGraphTraversal GetRandomTraversal(World world, Socket socket) {
     MapLocation[] interestingGoals = [
         new(world.GetMap("halloween"), new(8, 630)),
         new(world.GetMap("main"), new(-1184, 781)),
@@ -74,9 +72,9 @@ PlayerGraphTraversal GetRandomTraversal(Socket socket) {
         new(world.GetMap("winterland"), new(1245, -1490)),
     ];
 
-    SocketEntityData player = socket.Player;
+    LocalPlayer player = socket.Player;
 
     return new(socket, world.FindRoute(
-        new(world.GetMap(player.Map), player.Position),
+        new(world.GetMap(player.MapName), player.Position),
         interestingGoals[Random.Shared.Next(interestingGoals.Length)]));
 }

@@ -18,7 +18,7 @@ public class DestinationMovementPlan(Vector2 start, Vector2 goal) : ISocketEntit
         Vector2 dir = Vector2.Normalize(goal - start);
         float distance = Vector2.Distance(goal, start);
         float step = (float)(speed * dt);
-        start = step >= distance ? goal : dir * step;
+        start = step < distance ? start + dir * step : goal;
         return Finished;
     }
 }

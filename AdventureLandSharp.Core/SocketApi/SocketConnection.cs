@@ -11,7 +11,7 @@ public readonly record struct ConnectionSettings(
     ApiCharacter Character);
 
 public class Connection(ConnectionSettings settings) : IDisposable {
-    public event Action<Dictionary<string, JsonElement>>? OnConnected;
+    public event Action<JsonElement>? OnConnected;
     public event Action? OnDisconnected;
 
     public bool Connected => _connected && _authenticated && _ready;
@@ -87,7 +87,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         });
 
         _socketIo.On("start", e => {
-            OnConnected?.Invoke(e.GetValue<Dictionary<string, JsonElement>>());
+            OnConnected?.Invoke(e.GetValue<JsonElement>());
             _ready = true;
         });
 
