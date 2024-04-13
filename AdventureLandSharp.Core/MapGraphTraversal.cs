@@ -1,6 +1,7 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp;
 
@@ -52,7 +53,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
 
     private DateTimeOffset NextEdgeUpdate(DateTimeOffset now) => _edge switch {
         MapGraphEdgeIntraMap => now.Add(TimeSpan.FromSeconds(0.1)),
-        MapGraphEdgeInterMap => now.Add(TimeSpan.FromSeconds(3.0)),
+        MapGraphEdgeInterMap => now.Add(TimeSpan.FromSeconds(1.0)),
         MapGraphEdgeTeleport => now.Add(TimeSpan.FromSeconds(4.5)),
         _ => DateTimeOffset.MaxValue
     };
@@ -85,17 +86,19 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
 
     private MapGraphEdgeIntraMap ProcessEdge_TrimIntraMap(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
-            const float cutPadding = MapGrid.CellSize * -4;
-
-            float cuttableDistance = cutPadding + nextEdgeInter.Type switch {
-                MapConnectionType.Door => GameConstants.DoorDist,
-                MapConnectionType.Transporter => GameConstants.TransporterDist,
+            float cuttableDistance = nextEdgeInter.Type switch {
+                MapConnectionType.Door => GameConstants.DoorDist - _cellSizeEpsilon*2,
+                MapConnectionType.Transporter => GameConstants.TransporterDist - _cellSizeEpsilon*2,
                 _ => 0.0f
             };
 
             if (cuttableDistance > 0) {
-                int cutIdx = edge.Path.FindIndex(x => Vector2.Distance(x, edge.Dest.Location) < cuttableDistance);
-                edge.Path.RemoveRange(cutIdx, edge.Path.Count - cutIdx);
+                int cutIdx = edge.Path.FindIndex(x => Vector2.Distance(x, nextEdgeInter.Source.Location) < cuttableDistance);
+
+                if (cutIdx != -1) {
+                    edge.Path.RemoveRange(cutIdx, edge.Path.Count - cutIdx);
+                }
+
                 Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
                 return edge with { Dest = edge.Dest with { Location = newLocation } };
             }
@@ -110,9 +113,10 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
     public bool Finished => _pathMovementPlan.Finished;
     public Vector2 Position  => _pathMovementPlan.Position;
     public Vector2 Goal => _clickAheadPoint;
+    public Vector2 OriginalGoal => _pathMovementPlan.Goal;
 
     public bool Update(double dt, double speed) { 
-        _clickAheadPoint = Path.Count > 1 ? CalculateClickAheadPoint(_pathMovementPlan.Goal, (float)speed) : _pathMovementPlan.Goal;
+        _clickAheadPoint = Path.Count > 1 ? CalculateClickAheadPoint(OriginalGoal, (float)speed) : OriginalGoal;
         return _pathMovementPlan.Update(dt, speed);
     }
 
