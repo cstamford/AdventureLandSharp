@@ -39,10 +39,11 @@ public class BasicSession(
 
             Thread.Sleep(TimeSpan.FromSeconds(5));
         }
+
+        CleanUpAfterRun();
     }
 
     public void Dispose() {
-        CleanUpAfterRun();
         _disposed = true;
     }
 
