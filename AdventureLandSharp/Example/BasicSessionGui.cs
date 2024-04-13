@@ -89,10 +89,21 @@ public class BasicSessionGui : IDisposable {
         }
     }
 
-    private static void DrawMapGrid(Map map) {
+    private void DrawMapGrid(Map map) {
+        float camMinX = _cam.Target.X - _cam.Offset.X;
+        float camMinY = _cam.Target.Y - _cam.Offset.Y;
+        float camMaxX = _cam.Target.X + _cam.Offset.X;
+        float camMaxY = _cam.Target.Y + _cam.Offset.Y;
+
         for (int x = 0; x < map.Grid.Width; x++) {
             for (int y = 0; y < map.Grid.Height; y++) {
-                Vector2 pos = map.Grid.GridToWorld(new(x, y));
+                MapGridCell cell = new(x, y);
+                Vector2 pos = map.Grid.GridToWorld(cell);
+
+                if (pos.X < camMinX || pos.X > camMaxX || pos.Y < camMinY || pos.Y > camMaxY) {
+                    continue;
+                }
+
                 if (map.Grid.IsWalkable(pos)) {
                     Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
                 }
@@ -108,8 +119,8 @@ public class BasicSessionGui : IDisposable {
 }
 #else
 public class BasicSessionGui : IDisposable {
-    public BasicSessionGui() { }
-    public bool Update(Socket socket) => false;
+    public BasicSessionGui(World world, Socket socket) { }
+    public bool Update() => true;
     public void Dispose() {}
 }
 #endif
