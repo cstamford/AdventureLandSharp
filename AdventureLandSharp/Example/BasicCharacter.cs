@@ -149,5 +149,5 @@ public record struct Cooldown(TimeSpan cd) {
         _start = DateTimeOffset.Now;
     }
 
-    private DateTimeOffset _start = DateTimeOffset.Now;
+    private DateTimeOffset _start = DateTimeOffset.MinValue;
 }
