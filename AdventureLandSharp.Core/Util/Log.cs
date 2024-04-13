@@ -18,6 +18,7 @@ public static class Log {
     public static void Debug(string message) {
         _logLock.Wait();
         _logWriter.WriteLine($"[DEBUG] {message}");
+        Console.WriteLine($"[DEBUG] {message}");
         _logLock.Release();
     }
 

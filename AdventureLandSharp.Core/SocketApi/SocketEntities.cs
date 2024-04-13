@@ -45,10 +45,8 @@ public abstract class Entity {
         Id = source.GetString("id");
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
-        Vitals = new EntityVitals(monsterDef);
-        Vitals.Update(source);
-        Stats = new EntityStats(monsterDef);
-        Stats.Update(source);
+        Vitals = new EntityVitals(monsterDef).Update(source);
+        Stats = new EntityStats(monsterDef).Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
         _name = monsterDef.Name;
     }
@@ -56,8 +54,8 @@ public abstract class Entity {
     public virtual void Update(JsonElement source) {
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
-        Vitals.Update(source);
-        Stats.Update(source);
+        Vitals = Vitals.Update(source);
+        Stats = Stats.Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
     }
 
@@ -101,7 +99,14 @@ public sealed class Npc(JsonElement source) : Entity(source) {
     public override string Name => Id[1..];
 }
 
-public class Player(JsonElement source) : Entity(source);
+public class Player(JsonElement source) : Entity(source) {
+    public string OwnerId { get; private set; } = source.GetString("owner");
+
+    public override void Update(JsonElement source) {
+        base.Update(source);
+        OwnerId = source.GetString("owner");
+    }
+}
 
 public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
@@ -114,7 +119,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
 
     public override void Update(JsonElement source) {
         base.Update(source);
-        Inventory = source.Deserialize<PlayerInventory>();
+        Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
         RemotePosition = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = null; // we handle this locally, and always ignore remote

@@ -62,8 +62,8 @@ public static class Inbound {
     public readonly record struct ChestDropData(
         [property: JsonPropertyName("chest")] string ChestType,
         [property: JsonPropertyName("id")] string Id,
-        [property: JsonPropertyName("items")] string[] Items,
         [property: JsonPropertyName("map")] string Map,
+        [property: JsonPropertyName("owners")] string[] Owners,
         [property: JsonPropertyName("x")] float X,
         [property: JsonPropertyName("y")] float Y
     );
@@ -216,7 +216,7 @@ public readonly record struct DropData(
     public Vector2 Position => new(X, Y);
 };
 
-public record struct EntityStats(
+public readonly record struct EntityStats(
     [property: JsonPropertyName("armor")] float Armour,
     [property: JsonPropertyName("attack")] float AttackDamage,
     [property: JsonPropertyName("frequency")] float AttackFrequency,
@@ -235,18 +235,18 @@ public record struct EntityStats(
         Xp: (float)monsterDef.Xp)
     { }
 
-    public void Update(JsonElement source) {
-        Armour = source.GetFloat("armor", Armour);
-        AttackDamage = source.GetFloat("attack", AttackDamage);
-        AttackFrequency = source.GetFloat("frequency", AttackFrequency);
-        AttackRange = source.GetFloat("range", AttackRange);
-        Resistance = source.GetFloat("resistance", Resistance);
-        Speed = source.GetFloat("speed", Speed);
-        Xp = source.GetFloat("xp", Xp);
-    }
+    public EntityStats Update(JsonElement source) => this with {
+        Armour = source.GetFloat("armor", Armour),
+        AttackDamage = source.GetFloat("attack", AttackDamage),
+        AttackFrequency = source.GetFloat("frequency", AttackFrequency),
+        AttackRange = source.GetFloat("range", AttackRange),
+        Resistance = source.GetFloat("resistance", Resistance),
+        Speed = source.GetFloat("speed", Speed),
+        Xp = source.GetFloat("xp", Xp)
+    };
 }
 
-public record struct EntityVitals(
+public readonly record struct EntityVitals(
     [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("rip")] bool Dead,
     [property: JsonPropertyName("hp"), JsonRequired()] float Hp,
     [property: JsonPropertyName("mp"), JsonRequired()] float Mp,
@@ -261,13 +261,13 @@ public record struct EntityVitals(
         MaxMp: (float)monsterDef.Mp)
     { }
 
-    public void Update(JsonElement source) {
-        Dead = source.GetBool("rip", Dead);
-        Hp = source.GetFloat("hp", Hp);
-        Mp = source.GetFloat("mp", Mp);
-        MaxHp = source.GetFloat("max_hp", MaxHp);
-        MaxMp = source.GetFloat("max_mp", MaxMp);
-    }
+    public EntityVitals Update(JsonElement source) => this with {
+        Dead = source.GetBool("rip", false),
+        Hp = source.GetFloat("hp", Hp),
+        Mp = source.GetFloat("mp", Mp),
+        MaxHp = source.GetFloat("max_hp", MaxHp),
+        MaxMp = source.GetFloat("max_mp", MaxMp)
+    };
 }
 
 public readonly record struct Item(
@@ -298,8 +298,15 @@ public readonly record struct PlayerEquipment(
 
 public readonly record struct PlayerInventory(
     [property: JsonPropertyName("gold")] long Gold,
-    [property: JsonPropertyName("items")] List<Item?> Items
-);
+    [property: JsonPropertyName("items")] List<Item?> Items)
+{
+    public PlayerInventory Update(JsonElement source) => this with {
+        Gold = source.GetLong("gold", Gold),
+        Items = source.TryGetProperty("items", out JsonElement items) ? items.Deserialize<List<Item?>>()! : Items
+    };
+
+    public readonly int FindSlotId(string name) => Items.FindIndex(item => item?.Name == name);
+}
 
 public readonly record struct StatusEffect(
     [property: JsonPropertyName("f")] string Owner,

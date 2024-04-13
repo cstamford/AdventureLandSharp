@@ -73,12 +73,16 @@ public static class Outbound {
     );
 
     [OutboundSocketMessage("party")]
-    public readonly record struct PartyAccept([property: JsonPropertyName("name")] string Name) {
+    public readonly record struct PartyAccept(
+        [property: JsonPropertyName("name")] string Name)
+    {
         [property: JsonPropertyName("event")] public string Event { get; } = "raccept";
     }
 
     [OutboundSocketMessage("party")]
-    public readonly record struct PartyInvite([property: JsonPropertyName("name")] string Name) {
+    public readonly record struct PartyInvite(
+        [property: JsonPropertyName("name")] string Name)
+    {
         [property: JsonPropertyName("event")] public string Event { get; } = "request";
     }
 
@@ -114,7 +118,7 @@ public static class Outbound {
     );
 
     [OutboundSocketMessage("use")]
-    public readonly record struct UseItem(
+    public readonly record struct Use(
         [property: JsonPropertyName("item")] string Item
     );
 

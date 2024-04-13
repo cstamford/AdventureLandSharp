@@ -109,17 +109,14 @@ public class Connection(ConnectionSettings settings) : IDisposable {
             _ready = false;
         }
 
-        if (_socketIo != null) {
-            _socketIo.DisconnectAsync();
-            Thread.Sleep(200); // forgive me
-
-            try {
-                _socketIo.Dispose();
-            } catch (Exception e) {
-                Log.Error($"Error disposing _socketIo: {e}");
-            } finally {
-                _socketIo = null;
-            }
+        try {
+            _socketIo?.DisconnectAsync();
+            Thread.Sleep(1000);
+            _socketIo?.Dispose();
+        } catch (Exception e) {
+            Log.Error($"Error disposing _socketIo: {e}");
+        } finally {
+            _socketIo = null;
         }
 
         _authenticated = false;

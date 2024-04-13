@@ -1,9 +1,11 @@
 using System.Numerics;
+using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
 
-namespace AdventureLandSharp.Core;
+namespace AdventureLandSharp;
 
-public class PlayerGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
+public class GraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
+    public IMapGraphEdge? Edge => _edge;
     public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
 
     public void Update() {

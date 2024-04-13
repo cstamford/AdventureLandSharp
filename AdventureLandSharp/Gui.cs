@@ -7,17 +7,17 @@ namespace AdventureLandSharp;
 using Raylib_cs;
 using System.Numerics;
 
-public class DebugGui {
-    public DebugGui(World world, Socket socket) {
+public class GameGui : IDisposable {
+    public GameGui(World world, Socket socket) {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         Raylib.InitWindow(_width, _height, $"Adventure Land");
         _world = world;
         _socket = socket;
     }
 
-    public void Update() {
+    public bool Update() {
         Raylib.BeginDrawing();
-        Raylib.ClearBackground(Color.DarkGray);
+        Raylib.ClearBackground(new Color(48, 48, 48, 255));
 
         LocalPlayer player = _socket.Player;
 
@@ -53,6 +53,12 @@ public class DebugGui {
 
         Raylib.EndMode2D();
         Raylib.EndDrawing();
+
+        return !Raylib.WindowShouldClose();
+    }
+
+    public void Dispose() {
+        Raylib.CloseWindow();
     }
 
     private const int _width = 1920;
@@ -74,46 +80,11 @@ public class DebugGui {
     }
 
     private static void DrawMapGrid(Map map) {
-        GameLevelGeometry level = map.Geometry;
-
-        int width = (level.MaxX - level.MinX) / MapGrid.CellSize;
-        int height = (level.MaxY - level.MinY) / MapGrid.CellSize;
-
-        float minCost = float.MaxValue;
-        float maxCost = float.MinValue;
-
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                MapGridCell gridCell = new(x, y);
-                float cost = map.Grid.Cost(gridCell);
-
-                if (cost < minCost) {
-                    minCost = cost;
-                }
-
-                if (cost > maxCost) {
-                    maxCost = cost;
-                }
-            }
-        }
-
-        float costRange = maxCost - minCost;
-
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                MapGridCell gridCell = new(x, y);
-                float normalizedCost = (map.Grid.Cost(gridCell) - minCost) / costRange;
-                int worldX = level.MinX + x * MapGrid.CellSize;
-                int worldY = level.MinY + y * MapGrid.CellSize;
-
-                if (map.Grid.IsWalkable(gridCell)) {
-                    Raylib.DrawRectangle(worldX, worldY, MapGrid.CellSize, MapGrid.CellSize, new(
-                        (int)(255 * normalizedCost),
-                        (int)(165 * normalizedCost),
-                        0,
-                        (int)(255 * normalizedCost)));
-                } else {
-                    Raylib.DrawRectangle(worldX, worldY, MapGrid.CellSize, MapGrid.CellSize, new(0, 0, 255, 255));
+        for (int x = 0; x < map.Grid.Width; x++) {
+            for (int y = 0; y < map.Grid.Height; y++) {
+                Vector2 pos = map.Grid.GridToWorld(new(x, y));
+                if (map.Grid.IsWalkable(pos)) {
+                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
                 }
             }
         }
@@ -126,8 +97,9 @@ public class DebugGui {
     }
 }
 #else
-public class DebugGui {
-    public DebugGui() { }
-    public void Update(Socket socket) { }
+public class GameGui : IDisposable {
+    public GameGui() { }
+    public bool Update(Socket socket) => false;
+    public void Dispose() {}
 }
 #endif

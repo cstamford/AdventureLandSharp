@@ -138,6 +138,10 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.DeathData evt) {
+        if (evt.Id == _player.Id) {
+            _player.On(evt);
+        }
+        
         if (_entities.TryGetValue(evt.Id, out Entity? e)) {
             e.On(evt);
         }
@@ -148,7 +152,9 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.ChestDropData evt) {
-        _drops.Add(evt.Id, new(evt.Id, evt.X, evt.Y));
+        if (evt.Owners.Contains(_player.OwnerId)) {
+            _drops.Add(evt.Id, new(evt.Id, evt.X, evt.Y));
+        }
     }
 
     private void Recv(Inbound.EntitiesData evt) {
