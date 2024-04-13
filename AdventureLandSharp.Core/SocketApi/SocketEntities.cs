@@ -127,6 +127,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
 
     public void On(Inbound.CorrectionData evt) {
         Position = new(evt.X, evt.Y);
+        RemotePosition = Position;
         MovementPlan = null;
     }
 
@@ -134,6 +135,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         MapName = evt.MapName;
         MapId = evt.MapId;
         Position = new(evt.PlayerX, evt.PlayerY);
+        RemotePosition = Position;
         MovementPlan = null;
     }
 }
