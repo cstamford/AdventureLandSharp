@@ -18,8 +18,10 @@ public class BasicCharacter : ICharacter {
             // If we're dead, respawn.
             new If(() => Me.Dead, () => _socket.Emit(new Outbound.Respawn())),
 
-            // If we're at very low health, trigger a disconnect.
-            new If(() => Me.HealthPercent <= 15, () => _running = false),
+            // If we're at very low health, drink a potion if we can, then disconnect.
+            new If(() => Me.HealthPercent <= 15, new Selector( 
+                new Do(ConsumePotions),
+                new Do(() => _running = false))),
 
             // If we're in the middle of teleporting, let's avoid doing anything else.
             new If(() => _traversal.Edge is MapGraphEdgeTeleport, new Success()),
