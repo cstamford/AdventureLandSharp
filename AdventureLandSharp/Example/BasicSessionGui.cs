@@ -33,6 +33,7 @@ public class BasicSessionGui : IDisposable {
         Map map = _world.GetMap(player.MapName);
         DrawMapGrid(map);
         DrawMapBoundaries(map);
+        DrawMapConnections(map);
 
         foreach (Entity e in _socket.Entities) {
             Color col = e switch { 
@@ -54,6 +55,10 @@ public class BasicSessionGui : IDisposable {
 
         if (player.MovementPlan is PathMovementPlan pathPlan) {
             DrawPath([.. pathPlan.Path], Color.Green);
+        } else if (player.MovementPlan is ClickAheadMovementPlan clickAheadPlan) {
+            DrawPath([.. clickAheadPlan.Path], Color.Green);
+            Raylib.DrawLine((int)player.Position.X, (int)player.Position.Y, (int)clickAheadPlan.Goal.X, (int)clickAheadPlan.Goal.Y, Color.Lime);
+            Raylib.DrawCircle((int)clickAheadPlan.Goal.X, (int)clickAheadPlan.Goal.Y, 4, Color.Lime);
         }
 
         Raylib.EndMode2D();
@@ -108,6 +113,13 @@ public class BasicSessionGui : IDisposable {
                     Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
                 }
             }
+        }
+    }
+
+    private void DrawMapConnections(Map map) {
+        foreach (MapConnection conn in map.Connections.Where(x => x.SourceMap == map.Name)) {
+            Raylib.DrawText(conn.DestMap, (int)conn.SourceX, (int)conn.SourceY - 16, 12, Color.Gold);
+            Raylib.DrawRectangle((int)conn.SourceX, (int)conn.SourceY, 8, 8, Color.Gold);
         }
     }
 
