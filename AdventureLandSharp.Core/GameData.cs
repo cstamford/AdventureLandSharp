@@ -7,6 +7,7 @@ public static class GameConstants {
     public const int VisionWidth = 700;
     public const int VisionHeight = 500;
     public const int SellDist = 400;
+    public const int LootDist = 400;
     public const int DoorDist = 112;
     public const int TransporterDist = 160;
 }

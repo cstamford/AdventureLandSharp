@@ -60,8 +60,8 @@ public class BasicCharacter : ICharacter {
     private readonly INode _btAbility;
     private readonly INode _btMovement;
 
-    private Cooldown _attackCd = new();
-    private Cooldown _healPotionCd = new(TimeSpan.FromSeconds(4));
+    private readonly Cooldown _attackCd = new(default);
+    private readonly Cooldown _healPotionCd = new(TimeSpan.FromSeconds(4));
 
     private MapGraphTraversal GetRandomTraversal() {
         MapLocation[] interestingGoals = [
@@ -134,14 +134,10 @@ public class BasicCharacter : ICharacter {
     }
 }
 
-public record struct Cooldown(TimeSpan cd) {
-    public TimeSpan Duration { 
-        readonly get => cd;
-        set => cd = value;
-    }
-
-    public readonly TimeSpan Remaining => _start.Add(cd).Subtract(DateTimeOffset.Now);
-    public readonly bool Ready => Remaining <= TimeSpan.Zero;
+public class Cooldown(TimeSpan cd) {
+    public TimeSpan Duration { get; set; } = cd;
+    public TimeSpan Remaining => _start.Add(Duration).Subtract(DateTimeOffset.Now);
+    public bool Ready => Remaining <= TimeSpan.Zero;
     
     public void Restart() => _start = DateTimeOffset.Now;
     public void Restart(TimeSpan duration) {
