@@ -79,8 +79,6 @@ public class CharacterExample : ICharacter {
     }
 
     private Status AttackNearbyEnemy() {
-        _attackCd.Duration = TimeSpan.FromSeconds(Me.AttackSpeed);
-
         if (_attackCd.Ready) {
             Monster? target = Enemies
                 .Select(x => (monster: x, distance: Vector2.Distance(Me.Position, x.Position)))
@@ -91,7 +89,7 @@ public class CharacterExample : ICharacter {
 
             if (target != null) {
                 _socket.Emit(new Outbound.Attack(target.Id));
-                _attackCd.Restart();
+                _attackCd.Restart(TimeSpan.FromSeconds(Me.AttackSpeed));
                 return Status.Success;
             }
         }
@@ -123,15 +121,13 @@ public class CharacterExample : ICharacter {
 
             if (equipSlotId != null) {
                 _socket.Emit(new Outbound.Equip(equipSlotId.Value));
-                _healPotionCd.Duration = TimeSpan.FromSeconds(2);
-                _healPotionCd.Restart();
+                _healPotionCd.Restart(TimeSpan.FromSeconds(2));
                 return Status.Success;
             }
 
             if (useId != null) {
                 _socket.Emit(new Outbound.Use(useId));
-                _healPotionCd.Duration = TimeSpan.FromSeconds(4);
-                _healPotionCd.Restart();
+                _healPotionCd.Restart(TimeSpan.FromSeconds(4));
                 return Status.Success;
             }
         }
@@ -150,6 +146,10 @@ public record struct Cooldown(TimeSpan cd) {
     public readonly bool Ready => Remaining <= TimeSpan.Zero;
     
     public void Restart() => _start = DateTimeOffset.Now;
+    public void Restart(TimeSpan duration) {
+        Duration = duration;
+        _start = DateTimeOffset.Now;
+    }
 
     private DateTimeOffset _start = DateTimeOffset.Now;
 }

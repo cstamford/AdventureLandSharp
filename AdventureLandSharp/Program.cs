@@ -50,7 +50,7 @@ while (true) {
                 session.EnterUpdateLoop();
             });
 
-            Thread.Sleep(5000);
+            Thread.Sleep(TimeSpan.FromSeconds(5));
         }
     }
 
