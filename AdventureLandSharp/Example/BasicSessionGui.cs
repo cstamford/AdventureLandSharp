@@ -1,16 +1,16 @@
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
 
-namespace AdventureLandSharp;
+namespace AdventureLandSharp.Example;
 
 #if WITH_GUI
 using Raylib_cs;
 using System.Numerics;
 
-public class GameGui : IDisposable {
-    public GameGui(World world, Socket socket) {
+public class BasicSessionGui : IDisposable {
+    public BasicSessionGui(World world, Socket socket) {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
-        Raylib.InitWindow(_width, _height, $"Adventure Land");
+        Raylib.InitWindow(_width, _height, $"Adventure Land: Basic GUI");
         _world = world;
         _socket = socket;
     }
@@ -58,7 +58,10 @@ public class GameGui : IDisposable {
     }
 
     public void Dispose() {
-        Raylib.CloseWindow();
+        if (_created) {
+            Raylib.CloseWindow();
+            _created = false;
+        }
     }
 
     private const int _width = 1920;
@@ -66,6 +69,7 @@ public class GameGui : IDisposable {
     private Camera2D _cam = new(Vector2.Zero, Vector2.Zero, 0.0f, 1.0f);
     private readonly World _world;
     private readonly Socket _socket;
+    private static bool _created = true;
 
     private static void DrawMapBoundaries(Map map) {
         GameLevelGeometry level = map.Geometry;
@@ -97,8 +101,8 @@ public class GameGui : IDisposable {
     }
 }
 #else
-public class GameGui : IDisposable {
-    public GameGui() { }
+public class BasicSessionGui : IDisposable {
+    public BasicSessionGui() { }
     public bool Update(Socket socket) => false;
     public void Dispose() {}
 }

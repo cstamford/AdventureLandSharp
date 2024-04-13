@@ -1,18 +1,14 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
+using AdventureLandSharp.Interfaces;
 using AdventureLandSharp.Utility;
 
-namespace AdventureLandSharp;
+namespace AdventureLandSharp.Example;
 
-public class CharacterFactoryExample : ICharacterFactory {
-    public ICharacter Create(CharacterClass cls, World world, Socket socket) {
-        return new CharacterExample(cls, world, socket);
-    }
-} 
-
-public class CharacterExample : ICharacter {
-    public CharacterExample(CharacterClass cls, World world, Socket socket) {
+// Implements a basic character that can attack enemies, consume potions, and path through the world.
+public class BasicCharacter : ICharacter {
+    public BasicCharacter(World world, Socket socket, CharacterClass cls) {
         _cls = cls;
         _world = world;
         _socket = socket;
@@ -44,7 +40,7 @@ public class CharacterExample : ICharacter {
         );
     }
 
-    public bool Update(float dt) {
+    public bool Update() {
         _btAbility.Tick();
         _btMovement.Tick();
         return _running;
@@ -58,14 +54,14 @@ public class CharacterExample : ICharacter {
     private readonly Socket _socket;
     private bool _running = true;
 
-    private GraphTraversal _traversal;
+    private MapGraphTraversal _traversal;
     private readonly INode _btAbility;
     private readonly INode _btMovement;
 
     private Cooldown _attackCd = new();
     private Cooldown _healPotionCd = new(TimeSpan.FromSeconds(4));
 
-    private GraphTraversal GetRandomTraversal() {
+    private MapGraphTraversal GetRandomTraversal() {
         MapLocation[] interestingGoals = [
             new(_world.GetMap("halloween"), new(8, 630)),
             new(_world.GetMap("main"), new(-1184, 781)),

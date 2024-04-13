@@ -1,15 +1,11 @@
 ﻿using AdventureLandSharp.Core;
-using AdventureLandSharp.Core.SocketApi;
 using AdventureLandSharp.Core.HttpApi;
-using AdventureLandSharp.Game;
-using AdventureLandSharp;
+using AdventureLandSharp.Interfaces;
 
 const string serverAddrLocal = "localhost:8083";
 const string serverAddrLive = "adventure.land";
 const string user = "dev";
 const string pass = "dev";
-const string serverRegion = "US";
-const string serverName = "III";
 
 ApiAddress apiAddr = new($"http://{serverAddrLocal}");
 GameData data = await Api.FetchGameDataAsync(apiAddr);
@@ -23,36 +19,34 @@ if (!auth.Success) {
 }
 
 ServersAndCharactersResponse serversAndCharacters = await Api.ServersAndCharactersAsync(apiAddr);
-
-List<ConnectionSettings> sessionSettings = serversAndCharacters.Characters
-    .OrderByDescending(x => x.Level)
-    .Select(x => new ConnectionSettings(
-        UserId: auth.UserId,
-        AuthToken: auth.AuthToken,
-        Server: serversAndCharacters.Servers.First(x => x is { Region: serverRegion, Name: serverName}),
-        Character: x))
-    .Take(1)
-    .ToList();
-
-List<Task> sessions = [..Enumerable.Range(0, sessionSettings.Count).Select(_ => Task.CompletedTask)];
-
-ICharacterFactory exampleCharacterFactory = new CharacterFactoryExample();
+ISessionCoordinator coordinator = DependencyResolver.SessionCoordinator()(world, auth, serversAndCharacters);
+List<RunningSession> sessions = [];
 
 while (true) {
-    for (int i = 0; i < sessionSettings.Count; i++) {
-        ConnectionSettings settings = sessionSettings[i];
-        Task sessionTask = sessions[i];
-        bool isGuiSession = i == 0;
+    IEnumerable<RunningSession> staleSessions = sessions.Where(x => 
+        x.SessionTask.IsCompleted ||
+        !coordinator.Plans.Any(y => x.Session.Settings == y.Connection));
 
-        if (sessionTask.IsCompleted) {
-            sessions[i] = Task.Run(() => {
-                using Session session = new(world, settings, exampleCharacterFactory, withGui: isGuiSession);
-                session.EnterUpdateLoop();
-            });
-
-            Thread.Sleep(TimeSpan.FromSeconds(5));
-        }
+    foreach (RunningSession staleSession in staleSessions) {
+        staleSession.Session.Dispose();
+        await staleSession.SessionTask;
     }
 
-    await Task.WhenAny(sessions);
+    sessions.RemoveAll(x => staleSessions.Contains(x));
+
+    IEnumerable<SessionPlan> freshSessions = coordinator.Plans
+        .Where(x => !sessions.Any(y => y.Session.Settings == x.Connection));
+
+    foreach (SessionPlan plan in freshSessions) {
+        ISession session = plan.SessionFactory(world, plan.Connection, plan.CharacterFactory);
+        Task sessionTask = Task.Run(session.EnterUpdateLoop);
+        sessions.Add(new RunningSession(session, sessionTask));
+    }
+
+    await Task.WhenAny([
+        ..sessions.Select(x => x.SessionTask),
+        Task.Delay(TimeSpan.FromMilliseconds(100))
+    ]);
 }
+
+internal readonly record struct RunningSession(ISession Session, Task SessionTask);

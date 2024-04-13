@@ -1,7 +1,7 @@
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
 
-namespace AdventureLandSharp;
+namespace AdventureLandSharp.Interfaces;
 
 public enum CharacterClass {
     Mage,
@@ -14,9 +14,11 @@ public enum CharacterClass {
 };
 
 public interface ICharacter {
-    public bool Update(float dt);
+    public bool Update();
 }
 
-public interface ICharacterFactory {
-    public ICharacter Create(CharacterClass characterClass, World world, Socket socket);
-}
+public delegate ICharacter CharacterFactory(
+    World world,
+    Socket socket,
+    CharacterClass cls
+);

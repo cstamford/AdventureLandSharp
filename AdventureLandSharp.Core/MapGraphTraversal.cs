@@ -4,7 +4,7 @@ using AdventureLandSharp.Core.SocketApi;
 
 namespace AdventureLandSharp;
 
-public class GraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
+public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
     public IMapGraphEdge? Edge => _edge;
     public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
 
