@@ -1,6 +1,7 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp;
 
@@ -72,7 +73,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
                 if (closestPointToUsIdx != -1) {
                     intraMap.Path.RemoveRange(0, closestPointToUsIdx);
                 }
-                Player.MovementPlan = new PathMovementPlan(Player.Position, new(intraMap.Path));
+                Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
             }
         } else if (_edge is MapGraphEdgeTeleport) {
             EmitAndClearMovement<Outbound.Town>(new());
@@ -84,5 +85,27 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
     private void EmitAndClearMovement<T>(T data) where T: struct {
         socket.Emit(data);
         Player.MovementPlan = null;
+    }
+}
+
+public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map) : ISocketEntityMovementPlan {
+    public Queue<Vector2> Path => _pathMovementPlan.Path;
+    public bool Finished => _pathMovementPlan.Finished;
+    public Vector2 Position  => _pathMovementPlan.Position;
+    public Vector2 Goal => _clickAheadPoint;
+
+    public bool Update(double dt, double speed) { 
+        _clickAheadPoint = Path.Count > 1 ? CalculateClickAheadPoint(_pathMovementPlan.Goal, (float)speed) : _pathMovementPlan.Goal;
+        return _pathMovementPlan.Update(dt, speed);
+    }
+
+    private readonly PathMovementPlan _pathMovementPlan = new(start, path);
+    private Vector2 _clickAheadPoint = start;
+
+    private Vector2 CalculateClickAheadPoint(Vector2 target, float speed) {
+        Vector2 direction = Vector2.Normalize(target - Position);
+        Vector2 clickAheadTarget = target + direction * speed * 0.33f;
+        MapGridLineOfSight los = map.Grid.LineOfSight(map.Grid.WorldToGrid(Position), map.Grid.WorldToGrid(clickAheadTarget));
+        return los.OccludedAt != null ? map.Grid.GridToWorld(los.OccludedAt.Value) : clickAheadTarget;
     }
 }

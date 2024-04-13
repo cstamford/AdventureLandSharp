@@ -13,6 +13,12 @@ public enum MapGridHeuristic {
     Diagonal
 }
 
+public readonly record struct MapGridLineOfSight(
+    MapGridCell Start,
+    MapGridCell End,
+    MapGridCell? OccludedAt
+);
+
 public readonly record struct MapGridCell(int X, int Y) : IComparable<MapGridCell> {
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public MapGridCell(Vector2 grid)
@@ -204,7 +210,7 @@ public class MapGrid {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public bool CheckLineOfSight(MapGridCell start, MapGridCell end) {
+    public MapGridLineOfSight LineOfSight(MapGridCell start, MapGridCell end) {
         int x0 = start.X;
         int y0 = start.Y;
         int x1 = end.X;
@@ -216,11 +222,13 @@ public class MapGrid {
         int sy = y0 < y1 ? 1 : -1;
         int err = dx - dy;
 
+        MapGridCell last = new(x0, y0);
+
         while (true) {
             MapGridCell cur = new(x0, y0);
-            
+
             if (!IsWalkable(cur)) {
-                return false;
+                return new(start, end, last);
             }
 
             if (x0 == x1 && y0 == y1) {
@@ -236,9 +244,11 @@ public class MapGrid {
                 err += dx;
                 y0 += sy;
             }
+
+            last = cur;
         }
 
-        return true;
+        return new(start, end, null);
     }
 
 
