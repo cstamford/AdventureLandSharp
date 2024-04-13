@@ -20,10 +20,10 @@ public class CharacterExample : ICharacter {
 
         _btAbility = new Selector(
             // If we're dead, respawn.
-            new If(() => _socket.Player.Dead, () => _socket.Emit(new Outbound.Respawn())),
+            new If(() => Me.Dead, () => _socket.Emit(new Outbound.Respawn())),
 
             // If we're at very low health, trigger a disconnect.
-            new If(() => _socket.Player.HealthPercent <= 15, () => _running = false),
+            new If(() => Me.HealthPercent <= 15, () => _running = false),
 
             // If we're in the middle of teleporting, let's avoid doing anything else.
             new If(() => _traversal.Edge is MapGraphEdgeTeleport, new Success()),
@@ -73,10 +73,8 @@ public class CharacterExample : ICharacter {
             new(_world.GetMap("winterland"), new(1245, -1490)),
         ];
 
-        LocalPlayer player = _socket.Player;
-
         return new(_socket, _world.FindRoute(
-            new(_world.GetMap(player.MapName), player.Position),
+            new(_world.GetMap(Me.MapName), Me.Position),
             interestingGoals[Random.Shared.Next(interestingGoals.Length)]));
     }
 
@@ -103,8 +101,8 @@ public class CharacterExample : ICharacter {
 
     private Status ConsumePotions() {
         if (_healPotionCd.Ready) {
-            int hpSlotId = _socket.Player.Inventory.FindSlotId("hpot0");
-            int mpSlotId = _socket.Player.Inventory.FindSlotId("mpot0");
+            int hpSlotId = Me.Inventory.FindSlotId("hpot0");
+            int mpSlotId = Me.Inventory.FindSlotId("mpot0");
 
             int? equipSlotId = null;
             string? useId = null;
