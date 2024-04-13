@@ -1,7 +1,6 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
-using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp;
 
@@ -69,10 +68,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
             }
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
             if (Player.MovementPlan == null) {
-                int closestPointToUsIdx = intraMap.Path.FindIndex(p => Equivalent(p, Player.Position));
-                if (closestPointToUsIdx != -1) {
-                    intraMap.Path.RemoveRange(0, closestPointToUsIdx);
-                }
+                _edge = ProcessEdge_TrimIntraMap(intraMap); // note: updates intraMap.Path in-place
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
             }
         } else if (_edge is MapGraphEdgeTeleport) {
@@ -85,6 +81,27 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
     private void EmitAndClearMovement<T>(T data) where T: struct {
         socket.Emit(data);
         Player.MovementPlan = null;
+    }
+
+    private MapGraphEdgeIntraMap ProcessEdge_TrimIntraMap(MapGraphEdgeIntraMap edge) {
+        if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
+            const float cutPadding = MapGrid.CellSize * -4;
+
+            float cuttableDistance = cutPadding + nextEdgeInter.Type switch {
+                MapConnectionType.Door => GameConstants.DoorDist,
+                MapConnectionType.Transporter => GameConstants.TransporterDist,
+                _ => 0.0f
+            };
+
+            if (cuttableDistance > 0) {
+                int cutIdx = edge.Path.FindIndex(x => Vector2.Distance(x, edge.Dest.Location) < cuttableDistance);
+                edge.Path.RemoveRange(cutIdx, edge.Path.Count - cutIdx);
+                Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
+                return edge with { Dest = edge.Dest with { Location = newLocation } };
+            }
+        }
+
+        return edge;
     }
 }
 
