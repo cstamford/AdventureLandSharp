@@ -1,272 +1,287 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text.Json;
-using AdventureLandSharp.Core.Util;
+﻿namespace AdventureLandSharp.Core.SocketApi;
 
-namespace AdventureLandSharp.Core.SocketApi;
+public class Socket : IDisposable
+{
+    private readonly SocketConnection _connection;
 
-public class Socket : IDisposable {
-    public bool Connected => _connection.Connected && _player.Id != string.Empty;
-    public event Action<string, object>? OnEmit;
-    public event Action<string, object>? OnRecv;
+    private readonly Dictionary<string, DropData> _drops = [];
 
-    public LocalPlayer Player => _player;
-    public IEnumerable<Entity> Entities => _entities.Values;
-    public IEnumerable<DropData> Drops => _drops.Values;
-    public IEnumerable<Entity> Party => _party
-        .Where(_entities.ContainsKey)
-        .Select(x => _entities[x]);
+    private readonly Dictionary<string, Entity> _entities = [];
+    private readonly GameData _gameData;
+
+    private readonly ILogger _logger;
+
+    private readonly ConcurrentQueue<(string, MethodInfo, object)> _receiveQueue = [];
+    private DateTimeOffset _lastNetMove = DateTimeOffset.UtcNow;
+    private DateTimeOffset _lastTick = DateTimeOffset.UtcNow;
+
+    private List<string> _party = [];
 
     public Socket(
-        GameData gameData,
-        ConnectionSettings settings,
-        Action<string, object>? fnOnEmit = null,
-        Action<string, object>? fnOnRecv = null)
+        ref readonly GameData gameData,
+        SocketConnection connection,
+        ILogger<Socket> logger)
     {
         _gameData = gameData;
-        _connection = new(settings);
+        _connection = connection;
+        _logger = logger;
 
-        _connection.OnConnected += (x) => {
-            Log.Info("Connected to server.");
+        _connection.OnConnected += x =>
+        {
+            _logger.LogInformation("Connected to server");
 
-            MethodInfo? recvPlayer = typeof(Socket).GetMethod(
-                nameof(Recv_Player),
+            var receivePlayer = typeof(Socket).GetMethod(
+                nameof(ReceivePlayer),
                 BindingFlags.Instance | BindingFlags.NonPublic,
-                [ typeof(JsonElement) ]
+                [typeof(JsonElement)]
             );
 
-            Debug.Assert(recvPlayer != null);
-            _player = new LocalPlayer(x);
+            Debug.Assert(receivePlayer != null);
+            Player = new LocalPlayer(x);
 
-            _connection.SocketIo!.On("player", e => {
-                _recvQueue.Enqueue(("player", recvPlayer, e.GetValue<JsonElement>()));
-            });
+            _connection.SocketIo!.On("player",
+                e => { _receiveQueue.Enqueue(("player", receivePlayer, e.GetValue<JsonElement>())); });
         };
 
-        _connection.OnDisconnected += () => {
-            Log.Info("Disconnected from server.");
-        };
+        _connection.OnDisconnected += () => { _logger.LogInformation("Disconnected from server"); };
 
-        OnEmit += fnOnEmit;
-        OnRecv += fnOnRecv;
+        foreach (var (type, method, name) in Assembly.GetExecutingAssembly().GetTypes()
+                     .Select(x => (type: x, attr: x.GetCustomAttribute<InboundSocketMessageAttribute>()))
+                     .Where(x => x.attr != null)
+                     .Select(x => (
+                         x.type,
+                         name: x.attr!.Name,
+                         method: typeof(Socket).GetMethod("Receive", BindingFlags.Instance | BindingFlags.NonPublic,
+                             [x.type]
+                         )))
+                     .Where(x => x.method != null)
+                     .Select(x => (x.type, x.method!, x.name))
+                )
+        {
+            _logger.LogInformation("Registered message {Name} to handler {MethodName}", name, method.Name);
 
-        foreach ((Type type, MethodInfo method, string name) in Assembly.GetExecutingAssembly().GetTypes()
-            .Select(x => (type: x, attr: x.GetCustomAttribute<InboundSocketMessageAttribute>()))
-            .Where(x => x.attr != null)
-            .Select(x => (
-                x.type,
-                name: x.attr!.Name,
-                method: typeof(Socket).GetMethod("Recv", BindingFlags.Instance | BindingFlags.NonPublic, [ x.type ]
-            )))
-            .Where(x => x.method != null)
-            .Select(x => (x.type, x.method!, x.name))
-        ) {
-            Log.Info($"Registered message {name} to handler {method.Name}.");
-
-            MethodInfo? socketGetValueMethod = typeof(SocketIOClient.SocketIOResponse).GetMethod(
-                nameof(SocketIOClient.SocketIOResponse.GetValue),
+            var socketGetValueMethod = typeof(SocketIOResponse).GetMethod(
+                nameof(SocketIOResponse.GetValue),
                 BindingFlags.Instance | BindingFlags.Public
             );
             Debug.Assert(socketGetValueMethod != null, "Could not find GetValue method on SocketIOResponse.");
 
-            MethodInfo? genericMethod = socketGetValueMethod.MakeGenericMethod(type);
+            var genericMethod = socketGetValueMethod.MakeGenericMethod(type);
             Debug.Assert(genericMethod != null, "Could not create generic method for GetValue.");
 
-            _connection.OnConnected += _ => {
-                _connection.SocketIo!.On(name, e => {
-                    object? data = genericMethod.Invoke(e, [0]);
+            _connection.OnConnected += _ =>
+            {
+                _connection.SocketIo!.On(name, e =>
+                {
+                    var data = genericMethod.Invoke(e, [0]);
                     Debug.Assert(data != null, "Could not get data from SocketIOResponse.");
-                    _recvQueue.Enqueue((name, method, data));
+                    _receiveQueue.Enqueue((name, method, data));
                 });
             };
         }
     }
 
-    public void Dispose() {
+    public bool Connected => _connection.Connected && Player.Id != string.Empty;
+
+    public LocalPlayer Player { get; private set; } = default!;
+
+    public IEnumerable<Entity> Entities => _entities.Values;
+    public IEnumerable<DropData> Drops => _drops.Values;
+
+    public IEnumerable<Entity> Party => _party
+        .Where(_entities.ContainsKey)
+        .Select(x => _entities[x]);
+
+    public void Dispose()
+    {
         _connection.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 
-    public Task Emit<T>(T evt) where T: struct {
-        string name = typeof(T).GetCustomAttribute<OutboundSocketMessageAttribute>()?.Name
-            ?? throw new InvalidOperationException("Not a valid OutboundSocketMessage.");
+    public event Action<string, object>? OnEmit;
+    public event Action<string, object>? OnReceive;
 
-        try {
+    public async Task Emit<T>(T evt) where T : struct
+    {
+        var name = typeof(T).GetCustomAttribute<OutboundSocketMessageAttribute>()?.Name
+                   ?? throw new InvalidOperationException("Not a valid OutboundSocketMessage.");
+
+        try
+        {
             OnEmit?.Invoke(name, evt);
-        } catch (Exception ex) {
-            Log.Error($"(user) Error emitting message {name}: {ex}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "(user) Error emitting message {Name}: {Ex}", name, ex);
         }
 
-        return _connection.SocketIo!.EmitAsync(name, evt);
+        await _connection.SocketIo!.EmitAsync(name, evt);
     }
 
-    public void Update() {
-        _connection.Update();
+    public async Task Update()
+    {
+        await _connection.Update();
 
-        Update_DrainRecvQueue();
-        Update_CullEntities();
+        UpdateDrainReceiveQueue();
+        UpdateCullEntities();
 
-        if (!Connected) {
-            return;
-        }
+        if (!Connected) return;
 
-        Update_Tick();
-        Update_NetMovement();
+        UpdateTick();
+        await UpdateNetMovement();
     }
 
-    private readonly GameData _gameData;
-    private readonly Connection _connection;
-
-    private readonly ConcurrentQueue<(string, MethodInfo, object)> _recvQueue = [];
-    private DateTimeOffset _lastNetMove = DateTimeOffset.UtcNow;
-    private DateTimeOffset _lastTick = DateTimeOffset.UtcNow;
-
-    private readonly Dictionary<string, Entity> _entities = [];
-    private readonly Dictionary<string, DropData> _drops = [];
-
-    private List<string> _party = [];
-    private LocalPlayer _player = default!;
-
-    private void Recv(Inbound.ChestOpenedData evt) {
-        if (evt.Gone) {
-            _drops.Remove(evt.Id);
-        }
+    private void Receive(Inbound.ChestOpenedData evt)
+    {
+        if (evt.Gone) _drops.Remove(evt.Id);
     }
 
-    private void Recv(Inbound.CorrectionData evt) {
-        _player.On(evt);
+    private void Receive(Inbound.CorrectionData evt)
+    {
+        Player.On(evt);
     }
 
-    private void Recv(Inbound.DeathData evt) {
-        if (evt.Id == _player.Id) {
-            _player.On(evt);
-        }
-        
-        if (_entities.TryGetValue(evt.Id, out Entity? e)) {
-            e.On(evt);
-        }
+    private void Receive(Inbound.DeathData evt)
+    {
+        if (evt.Id == Player.Id) Player.On(evt);
+
+        if (_entities.TryGetValue(evt.Id, out var e)) e.On(evt);
     }
 
-    private void Recv(Inbound.DisappearData evt) {
+    private void Receive(Inbound.DisappearData evt)
+    {
         _entities.Remove(evt.Id);
     }
 
-    private void Recv(Inbound.ChestDropData evt) {
-        if (evt.Owners.Contains(_player.OwnerId)) {
-            _drops.Add(evt.Id, new(evt.Id, evt.X, evt.Y));
-        }
+    private void Receive(Inbound.ChestDropData evt)
+    {
+        if (evt.Owners.Contains(Player.OwnerId)) _drops.Add(evt.Id, new DropData(evt.Id, evt.X, evt.Y));
     }
 
-    private void Recv(Inbound.EntitiesData evt) {
-        if (evt.Type == "all") {
-            _entities.Clear();
-        }
+    private void Receive(Inbound.EntitiesData evt)
+    {
+        if (evt.Type == "all") _entities.Clear();
 
-        foreach (JsonElement player in evt.Players) {
-            string id = player.GetString("id");
+        foreach (var player in evt.Players)
+        {
+            var id = player.GetString("id");
 
-            if (id == _player.Id) {
-                Recv_Player(player);
+            if (id == Player.Id)
+            {
+                ReceivePlayer(player);
                 continue;
             }
 
-            if (_entities.TryGetValue(id, out Entity? e)) {
+            if (_entities.TryGetValue(id, out var e))
                 e.Update(player);
-            } else {
+            else
                 _entities.Add(id, id.StartsWith('$') ? new Npc(player) : new Player(player));
-            }
         }
 
-        foreach (JsonElement monster in evt.Monsters) {
-            string id = monster.GetString("id");
+        foreach (var monster in evt.Monsters)
+        {
+            var id = monster.GetString("id");
 
-            if (_entities.TryGetValue(id, out Entity? e)) {
+            if (_entities.TryGetValue(id, out var e))
+            {
                 e.Update(monster);
-            } else {
-                GameDataMonster monsterDef = _gameData.Monsters[monster.GetString("type")];
+            }
+            else
+            {
+                var monsterDef = _gameData.Monsters[monster.GetString("type")];
                 _entities.Add(id, new Monster(monster, monsterDef));
             }
         }
     }
 
-    private void Recv(Inbound.NewMapData evt) {
-        _player.On(evt);
-        Recv(evt.Entities);
+    private void Receive(Inbound.NewMapData evt)
+    {
+        Player.On(evt);
+        Receive(evt.Entities);
     }
 
-    private void Recv(Inbound.PartyUpdateData evt) {
+    private void Receive(Inbound.PartyUpdateData evt)
+    {
         _party = evt.Members ?? [];
     }
 
-    private void Recv_Player(JsonElement data) {
-        _player.Update(data);
+    private void ReceivePlayer(JsonElement data)
+    {
+        Player.Update(data);
     }
 
-    private void Update_DrainRecvQueue() {
-        while (_recvQueue.TryDequeue(out (string evt, MethodInfo method, object data) queued)) {
-            try {
+    private void UpdateDrainReceiveQueue()
+    {
+        while (_receiveQueue.TryDequeue(out (string evt, MethodInfo method, object data) queued))
+        {
+            try
+            {
                 queued.method.Invoke(this, [queued.data]);
-            } catch (Exception ex) {
-                Log.Error($"(system) Error processing message {queued.evt}: {ex}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "(system) Error processing message {QueuedEvent}: {Ex}", queued.evt, ex);
             }
 
-            try {
-                OnRecv?.Invoke(queued.evt, queued.data);
-            } catch (Exception ex) {
-                Log.Error($"(user) Error processing message {queued.evt}: {ex}");
+            try
+            {
+                OnReceive?.Invoke(queued.evt, queued.data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "(user) Error processing message {QueuedEvent}: {Ex}", queued.evt, ex);
             }
         }
     }
 
-    private void Update_CullEntities() {
+    private void UpdateCullEntities()
+    {
         List<string> cull = [];
 
-        foreach ((string key, Entity e) in _entities) {
-            float ex = e.Position.X;
-            float ey = e.Position.Y;
-            float px = _player.Position.X;
-            float py = _player.Position.Y;
+        foreach (var (key, e) in _entities)
+        {
+            var ex = e.Position.X;
+            var ey = e.Position.Y;
+            var px = Player.Position.X;
+            var py = Player.Position.Y;
 
-            bool cullOnX = ex < px - GameConstants.VisionWidth || ex > px + GameConstants.VisionWidth;
-            bool cullOnY = ey < py - GameConstants.VisionHeight || ey > py + GameConstants.VisionHeight;
+            var cullOnX = ex < px - GameConstants.VisionWidth || ex > px + GameConstants.VisionWidth;
+            var cullOnY = ey < py - GameConstants.VisionHeight || ey > py + GameConstants.VisionHeight;
 
-            if (cullOnX || cullOnY) {
-                cull.Add(key);
-            }
+            if (cullOnX || cullOnY) cull.Add(key);
         }
 
-        foreach (string key in cull) {
-            _entities.Remove(key);
-        }
+        foreach (var key in cull) _entities.Remove(key);
     }
 
-    private void Update_Tick() {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        float dt = MathF.Min((float)now.Subtract(_lastTick).TotalSeconds, 1.0f);
+    private void UpdateTick()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var dt = MathF.Min((float) now.Subtract(_lastTick).TotalSeconds, 1.0f);
         _lastTick = now;
 
-        _player.Tick(dt);
-    
-        foreach (Entity e in _entities.Values) {
-            e.Tick(dt);
-        }
+        Player.Tick(dt);
+
+        foreach (var e in _entities.Values) e.Tick(dt);
     }
 
-    public void Update_NetMovement() {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+    public async Task UpdateNetMovement()
+    {
+        var now = DateTimeOffset.UtcNow;
 
-        TimeSpan timeSinceLastMove = now.Subtract(_lastNetMove);
-        TimeSpan moveInterval = TimeSpan.FromSeconds(1.0f / 10.0f);
+        var timeSinceLastMove = now.Subtract(_lastNetMove);
+        var moveInterval = TimeSpan.FromSeconds(1.0f / 10.0f);
 
-        if (_player.RemotePosition != _player.GoalPosition && timeSinceLastMove >= moveInterval) {
-            Emit<Outbound.Move>(new(
-                X: _player.Position.X,
-                Y: _player.Position.Y,
-                TargetX: _player.GoalPosition.X,
-                TargetY: _player.GoalPosition.Y,
-                MapId: _player.MapId));
+        if (Player.RemotePosition == Player.GoalPosition || timeSinceLastMove < moveInterval) return;
 
-            _lastNetMove = now;
-        }
+        await Emit(new Outbound.Move(
+            Player.Position.X,
+            Player.Position.Y,
+            Player.GoalPosition.X,
+            Player.GoalPosition.Y,
+            Player.MapId));
+
+        _lastNetMove = now;
     }
 }

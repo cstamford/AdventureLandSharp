@@ -1,55 +1,62 @@
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.Text.Json;
-
 namespace AdventureLandSharp.Core.HttpApi;
 
-public readonly record struct ApiAuthState(bool Success, string UserId,string AuthToken);
-public readonly record struct ApiAddress(string Address);
-public readonly record struct ApiCredentials(string Email, string Password);
+public class Api
+{
+    private readonly ApiConfiguration _configuration;
+    private readonly HttpClient _http = new();
 
-public static class Api {
-    public static async Task<ApiAuthState> LoginAsync(ApiAddress addr, ApiCredentials creds) {
-        HttpResponseMessage res = await CallApiAsync(addr, new SignupOrLoginRequest(creds.Email, creds.Password));
-        SignupOrLoginResponse body = await ExtractResponse<SignupOrLoginResponse>(res);
-
-        string authToken = res.Headers.GetValues("Set-Cookie").First().Split(';').First().Replace("auth=", "");
-        string[] splitToken = authToken.Split('-');
-        Debug.Assert(splitToken.Length == 2);
-    
-        return new(
-            Success: body.Message == "Logged In!",
-            UserId: splitToken[0],
-            AuthToken: splitToken[1]);
+    public Api(ApiConfiguration configuration)
+    {
+        _configuration = configuration;
     }
 
-    public async static Task<ServersAndCharactersResponse> ServersAndCharactersAsync(ApiAddress addr) {
-        HttpResponseMessage res = await CallApiAsync(addr, new ServersAndCharactersRequest());
-        ServersAndCharactersResponse body = await ExtractResponse<ServersAndCharactersResponse>(res);
+    public async Task<ApiAuthState> LoginAsync()
+    {
+        var res = await CallApiAsync(_configuration.Address!,
+            new SignupOrLoginRequest(_configuration.Credentials.Email, _configuration.Credentials.Password));
+        var body = await ExtractResponse<SignupOrLoginResponse>(res);
+
+        var authToken = res.Headers.GetValues("Set-Cookie").First().Split(';').First().Replace("auth=", "");
+        var splitToken = authToken.Split('-');
+        Debug.Assert(splitToken.Length == 2);
+
+        return new ApiAuthState(
+            body.Message == "Logged In!",
+            splitToken[0],
+            splitToken[1]);
+    }
+
+    public async Task<ServersAndCharactersResponse> ServersAndCharactersAsync()
+    {
+        var res = await CallApiAsync(_configuration.Address!, new ServersAndCharactersRequest());
+        var body = await ExtractResponse<ServersAndCharactersResponse>(res);
         return body;
     }
 
-    public static async Task<GameData> FetchGameDataAsync(ApiAddress addr, bool useCache = true) {
+    public async Task<GameData> FetchGameDataAsync(bool useCache = true)
+    {
         string jsonContent;
 
-        if (useCache && File.Exists("gamedata.js")) {
-            jsonContent = File.ReadAllText("gamedata.js");
-        } else {
-            HttpResponseMessage response = await _http.GetAsync($"{addr.Address}/data.js");
-            string content = await response.Content.ReadAsStringAsync();
+        if (useCache && File.Exists("game-data.js"))
+        {
+            jsonContent = await File.ReadAllTextAsync("game-data.js");
+        }
+        else
+        {
+            var a = $"{_configuration.Address!.Address}/data.js";
+            var response = await _http.GetAsync(a);
+            var content = await response.Content.ReadAsStringAsync();
             jsonContent = content[(content.IndexOf('=') + 1)..^2];
-            File.WriteAllText("gamedata.js", jsonContent);
+            await File.WriteAllTextAsync("game-data.js", jsonContent);
         }
 
         return JsonSerializer.Deserialize<GameData>(jsonContent);
     }
 
-    private static readonly HttpClient _http = new();
-
-    private static Task<HttpResponseMessage> CallApiAsync<T>(ApiAddress addr, T request) where T: struct {
-        string method = request.GetType().GetCustomAttribute<HttpApiMessageAttribute>()!.Name;
-        return _http.PostAsync($"{addr.Address}/api/{method}", new StringContent(
+    private async Task<HttpResponseMessage> CallApiAsync<T>(ApiAddress addr, T request) where T : struct
+    {
+        var method = request.GetType().GetCustomAttribute<HttpApiMessageAttribute>()!.Name;
+        return await _http.PostAsync($"{addr.Address}/api/{method}", new StringContent(
             $"method={Uri.EscapeDataString(method)}&" +
             $"arguments={Uri.EscapeDataString(JsonSerializer.Serialize(request))}",
             Encoding.UTF8,
@@ -57,14 +64,18 @@ public static class Api {
         ));
     }
 
-    private static async Task<T> ExtractResponse<T>(HttpResponseMessage response) where T: struct {
-        string responseContent = await response.Content.ReadAsStringAsync();
-        JsonElement[] responseElems = JsonSerializer.Deserialize<JsonElement[]>(responseContent)!;
+    private static async Task<T> ExtractResponse<T>(HttpResponseMessage response) where T : struct
+    {
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseElems = JsonSerializer.Deserialize<JsonElement[]>(responseContent)!;
         return JsonSerializer.Deserialize<T>(responseElems.First().GetRawText())!;
     }
 }
 
+public readonly record struct ApiAuthState(bool Success, string UserId, string AuthToken);
+
 [AttributeUsage(AttributeTargets.Struct)]
-public class HttpApiMessageAttribute(string name) : Attribute {
+public class HttpApiMessageAttribute(string name) : Attribute
+{
     public string Name => name;
 }

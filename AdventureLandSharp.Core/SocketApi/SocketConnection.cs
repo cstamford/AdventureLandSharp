@@ -1,125 +1,191 @@
-using AdventureLandSharp.Core.HttpApi;
-using AdventureLandSharp.Core.Util;
-using System.Text.Json;
-
 namespace AdventureLandSharp.Core.SocketApi;
 
-public readonly record struct ConnectionSettings(
-    string UserId,
-    string AuthToken,
-    ApiServer Server,
-    ApiCharacter Character);
+public class ConnectionSettings(
+    string userId,
+    string authToken,
+    ApiServer server,
+    ApiCharacter character)
+{
+    public string UserId { get; } = userId;
+    public string AuthToken { get; } = authToken;
+    public ApiServer Server { get; } = server;
+    public ApiCharacter Character { get; } = character;
+}
 
-public class Connection(ConnectionSettings settings) : IDisposable {
+public class SocketConnection : IDisposable
+{
+    private readonly SemaphoreSlim _entitiesSemaphore = new(0);
+    private readonly ILogger _logger;
+    private readonly ConnectionSettings _settings;
+    private readonly SemaphoreSlim _startSemaphore = new(0);
+
+    private readonly SemaphoreSlim _welcomeSemaphore = new(0);
+
+    private bool _authenticated;
+    private DateTimeOffset _authTimeout = DateTimeOffset.UtcNow;
+
+    private bool _connected;
+    private bool _ready;
+    private DateTimeOffset _reconnectTimeout = DateTimeOffset.UtcNow;
+
+    public SocketConnection(ILogger<SocketConnection> logger, ConnectionSettings settings)
+    {
+        _logger = logger;
+        _settings = settings;
+    }
+
+    public bool Connected => _connected && _authenticated && _ready;
+    public SocketIOClient.SocketIO? SocketIo { get; private set; }
+
+    public void Dispose()
+    {
+        // Dispose can't really be async, so we will force the close to be sync here.
+        CloseExistingConnection().GetAwaiter().GetResult();
+        _welcomeSemaphore.Dispose();
+        _entitiesSemaphore.Dispose();
+        _startSemaphore.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
     public event Action<JsonElement>? OnConnected;
     public event Action? OnDisconnected;
 
-    public bool Connected => _connected && _authenticated && _ready;
-    public ConnectionSettings Settings => settings;
-    public SocketIOClient.SocketIO? SocketIo => _socketIo;
+    public async Task Update()
+    {
+        var now = DateTimeOffset.UtcNow;
 
-    public void Update() {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (!_connected)
+        {
+            await CloseExistingConnection();
 
-        if (!_connected) {
-            CloseExistingConnection();
-
-            if (now > _reconnectTimeout) {
-                StartConnection();
+            if (now > _reconnectTimeout)
+            {
+                await Connect();
                 _authTimeout = now.AddSeconds(10);
                 _reconnectTimeout = now.AddSeconds(15);
             }
         }
 
-        if (!_authenticated || !_ready) {
-            if (now > _authTimeout) {
-                CloseExistingConnection();
-            }
+        if (_authenticated && _ready) return;
 
-            return;
-        }
+        if (now > _authTimeout) await CloseExistingConnection();
     }
 
-    public void Dispose() {
-        CloseExistingConnection();
-    }
-
-    private SocketIOClient.SocketIO? _socketIo;
-    private DateTimeOffset _authTimeout = DateTimeOffset.UtcNow;
-    private DateTimeOffset _reconnectTimeout = DateTimeOffset.UtcNow;
-
-    private bool _connected;
-    private bool _authenticated;
-    private bool _ready;
-
-    private void StartConnection() {
+    private async Task Connect()
+    {
         // Socket login flow.
         // 1. Wait for "welcome" from server.
         // 2. Emit "loaded".
         // 3. Wait for "entities" from server.
         // 4. Emit "auth".
         // 5. Wait for "start" from server.
-        _socketIo = new($"http://{settings.Server.Addr}:{settings.Server.Port}");
 
-        _socketIo.On("welcome", async _ => {
-            await _socketIo.EmitAsync("loaded", new Outbound.Loaded(
-                Success: true,
-                Width: 1920,
-                Height: 1080,
-                Scale: 2));
+        // Need a way to get the protocol here, technically the server should really tell us, maybe get it from config.
+        SocketIo = new SocketIOClient.SocketIO($"http://{_settings?.Server.Addr}:{_settings?.Server.Port}");
+
+        SocketIo.On("welcome", async _ =>
+        {
+            try
+            {
+                await SocketIo.EmitAsync("loaded", new Outbound.Loaded(
+                    true,
+                    1920,
+                    1080,
+                    2));
+            }
+            finally
+            {
+                _welcomeSemaphore.Release();
+            }
         });
 
-        _socketIo.On("entities", async e => {
-            if (!_authenticated) {
-                await _socketIo.EmitAsync("auth", new Outbound.Auth(
-                    AuthToken: settings.AuthToken,
-                    CharacterId: settings.Character.Id,
-                    UserId: settings.UserId,
-                    Width: 1920,
-                    Height: 1080,
-                    Scale: 2,
-                    NoHtml: false,
-                    NoGraphics: false
+        SocketIo.On("entities", async e =>
+        {
+            if (_authenticated) return;
+            try
+            {
+                await SocketIo.EmitAsync("auth", new Outbound.Auth(
+                    _settings?.AuthToken!,
+                    _settings?.Character.Id!,
+                    _settings?.UserId!,
+                    1920,
+                    1080,
+                    2,
+                    false,
+                    false
                 ));
 
                 _authenticated = true;
             }
+            finally
+            {
+                _entitiesSemaphore.Release();
+            }
         });
 
-        _socketIo.On("start", e => {
-            OnConnected?.Invoke(e.GetValue<JsonElement>());
-            _ready = true;
+        SocketIo.On("start", e =>
+        {
+            try
+            {
+                OnConnected?.Invoke(e.GetValue<JsonElement>());
+                _ready = true;
+            }
+            finally
+            {
+                _startSemaphore.Release();
+            }
         });
 
-        _socketIo.OnDisconnected += (_, e) => HandleError("_socketIo.OnDisconnected", e);
-        _socketIo.OnError += (_, e) => HandleError("_socketIo.OnError", e);
+        SocketIo.OnDisconnected += async (_, e) => await HandleError("_socketIo.OnDisconnected", e);
+        SocketIo.OnError += async (_, e) => await HandleError("_socketIo.OnError", e);
 
-        _socketIo.ConnectAsync();
+        await SocketIo.ConnectAsync();
+        await _welcomeSemaphore.WaitAsync();
+        await _entitiesSemaphore.WaitAsync();
+        await _startSemaphore.WaitAsync();
+
         _connected = true;
     }
 
-    private void HandleError(string type, object e) {
-        Log.Error($"{type}: {e}");
-        CloseExistingConnection();
+    private async Task HandleError(string type, object e)
+    {
+        _logger.LogError("{Type}: {E}", type, e);
+
+        // Release the semaphores to ensure StartConnection doesn't get stuck.
+        _welcomeSemaphore.Release();
+        _entitiesSemaphore.Release();
+        _startSemaphore.Release();
+
+        await CloseExistingConnection();
     }
 
-    private void CloseExistingConnection() {
-        if (_ready) {
+    private async Task CloseExistingConnection()
+    {
+        if (_ready)
+        {
+            // OnDisconnected calls HandleError that then calls this, not sure that's the best idea, but it shouldn't hurt.
             OnDisconnected?.Invoke();
             _ready = false;
         }
 
-        try {
-            _socketIo?.DisconnectAsync();
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-            _socketIo?.Dispose();
-        } catch (Exception e) {
-            Log.Error($"Error disposing _socketIo: {e}");
-        } finally {
-            _socketIo = null;
+        try
+        {
+            if (SocketIo is not null)
+            {
+                await SocketIo.DisconnectAsync();
+                SocketIo?.Dispose();
+            }
         }
-
-        _authenticated = false;
-        _connected = false;
+        catch (Exception e)
+        {
+            _logger.LogError("Error disposing _socketIo: {E}", e);
+        }
+        finally
+        {
+            SocketIo = null;
+            _authenticated = false;
+            _connected = false;
+        }
     }
 }
