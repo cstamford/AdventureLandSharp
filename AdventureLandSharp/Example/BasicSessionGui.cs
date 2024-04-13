@@ -5,17 +5,22 @@ namespace AdventureLandSharp.Example;
 
 #if WITH_GUI
 using Raylib_cs;
+using System.Diagnostics;
 using System.Numerics;
 
 public class BasicSessionGui : IDisposable {
     public BasicSessionGui(World world, Socket socket) {
-        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
+        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow | ConfigFlags.AlwaysRunWindow);
         Raylib.InitWindow(_width, _height, $"Adventure Land: Basic GUI");
+
         _world = world;
         _socket = socket;
     }
 
     public bool Update() {
+        Debug.Assert(_created);
+        Debug.Assert(Raylib.IsWindowReady());
+
         Raylib.BeginDrawing();
         Raylib.ClearBackground(new Color(48, 48, 48, 255));
 
@@ -52,6 +57,7 @@ public class BasicSessionGui : IDisposable {
         }
 
         Raylib.EndMode2D();
+        Raylib.DrawFPS(8, 8);
         Raylib.EndDrawing();
 
         return !Raylib.WindowShouldClose();
