@@ -69,7 +69,7 @@ public class BasicSessionGui : IDisposable {
     private Camera2D _cam = new(Vector2.Zero, Vector2.Zero, 0.0f, 1.0f);
     private readonly World _world;
     private readonly Socket _socket;
-    private static bool _created = true;
+    private bool _created = true;
 
     private static void DrawMapBoundaries(Map map) {
         GameLevelGeometry level = map.Geometry;
