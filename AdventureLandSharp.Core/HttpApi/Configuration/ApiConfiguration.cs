@@ -1,13 +1,11 @@
 ﻿namespace AdventureLandSharp.Core.HttpApi.Configuration;
 
-public class ApiConfiguration
-{
+public class ApiConfiguration {
     public ApiAddress? Address { get; set; }
     public ApiCredentials Credentials { get; set; }
 }
 
-public class ApiAddress
-{
+public class ApiAddress {
     public bool Https { get; set; }
     public string? HostName { get; set; }
     public int? Port { get; set; }

@@ -1,7 +1,6 @@
 namespace AdventureLandSharp;
 
-public enum CharacterClass
-{
+public enum CharacterClass {
     Mage,
     Merchant,
     Paladin,
@@ -11,12 +10,10 @@ public enum CharacterClass
     Warrior
 }
 
-public interface ICharacter
-{
+public interface ICharacter {
     public Task<bool> Update(float dt);
 }
 
-public interface ICharacterFactory
-{
+public interface ICharacterFactory {
     public ICharacter Create(CharacterClass characterClass, World world, Socket socket);
 }

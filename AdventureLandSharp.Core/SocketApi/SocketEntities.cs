@@ -1,13 +1,9 @@
 namespace AdventureLandSharp.Core.SocketApi;
 
-public abstract class Entity
-{
-    private readonly string _name;
-
-    public Entity(JsonElement source)
-    {
+public abstract class Entity {
+    public Entity(JsonElement source) {
         Id = source.GetString("id");
-        Position = new Vector2(source.GetFloat("x"), source.GetFloat("y"));
+        Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
         Vitals = source.Deserialize<EntityVitals>();
         Stats = source.Deserialize<EntityStats>();
@@ -15,10 +11,9 @@ public abstract class Entity
         _name = Id;
     }
 
-    public Entity(JsonElement source, GameDataMonster monsterDef)
-    {
+    public Entity(JsonElement source, GameDataMonster monsterDef) {
         Id = source.GetString("id");
-        Position = new Vector2(source.GetFloat("x"), source.GetFloat("y"));
+        Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
         Vitals = new EntityVitals(monsterDef).Update(source);
         Stats = new EntityStats(monsterDef).Update(source);
@@ -51,72 +46,61 @@ public abstract class Entity
     public StatusEffects StatusEffects { get; protected set; }
     public ISocketEntityMovementPlan? MovementPlan { get; set; }
 
-    public virtual void Update(JsonElement source)
-    {
-        Position = new Vector2(source.GetFloat("x"), source.GetFloat("y"));
+    public virtual void Update(JsonElement source) {
+        Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
         Vitals = Vitals.Update(source);
         Stats = Stats.Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
     }
 
-    public virtual void Tick(float dt)
-    {
-        if (Dead)
-        {
+    public virtual void Tick(float dt) {
+        if (Dead) {
             MovementPlan = null;
             return;
         }
 
         if (GoingPosition.HasValue && (MovementPlan == null || MovementPlan.Position != Position ||
-                                       MovementPlan.Goal != GoingPosition))
+            MovementPlan.Goal != GoingPosition))
             MovementPlan = new DestinationMovementPlan(Position, GoingPosition.Value);
 
-        if (MovementPlan != null)
-        {
-            var finished = MovementPlan.Update(dt, Speed);
+        if (MovementPlan != null) {
+            bool finished = MovementPlan.Update(dt, Speed);
             Position = MovementPlan.Position;
 
             if (finished) MovementPlan = null;
         }
     }
 
-    public void On(Inbound.DeathData evt)
-    {
+    public void On(Inbound.DeathData evt) {
         Debug.Assert(evt.Id == Id);
-        Vitals = Vitals with {Dead = true};
+        Vitals = Vitals with { Dead = true };
     }
+    private readonly string _name;
 
-    private static Vector2? ParseGoingPosition(JsonElement source)
-    {
-        return source.GetBool("moving", false) &&
-               source.TryGetProperty("going_x", out var x) &&
-               source.TryGetProperty("going_y", out var y)
+    private static Vector2? ParseGoingPosition(JsonElement source) => source.GetBool("moving", false) &&
+        source.TryGetProperty("going_x", out JsonElement x) &&
+        source.TryGetProperty("going_y", out JsonElement y)
             ? new Vector2(x.GetSingle(), y.GetSingle())
             : null;
-    }
 }
 
 public sealed class Monster(JsonElement source, GameDataMonster monsterDef) : Entity(source, monsterDef);
 
-public sealed class Npc(JsonElement source) : Entity(source)
-{
+public sealed class Npc(JsonElement source) : Entity(source) {
     public override string Name => Id[1..];
 }
 
-public class Player(JsonElement source) : Entity(source)
-{
+public class Player(JsonElement source) : Entity(source) {
     public string OwnerId { get; private set; } = source.GetString("owner");
 
-    public override void Update(JsonElement source)
-    {
+    public override void Update(JsonElement source) {
         base.Update(source);
         OwnerId = source.GetString("owner");
     }
 }
 
-public sealed class LocalPlayer(JsonElement source) : Player(source)
-{
+public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
     public string MapName { get; private set; } = source.GetString("map");
     public long MapId { get; private set; } = source.GetLong("m");
@@ -125,26 +109,23 @@ public sealed class LocalPlayer(JsonElement source) : Player(source)
     public PlayerEquipment Equipment { get; private set; } = source.GetProperty("slots").Deserialize<PlayerEquipment>();
     public Vector2 RemotePosition { get; set; } = new(source.GetFloat("x"), source.GetFloat("y"));
 
-    public override void Update(JsonElement source)
-    {
+    public override void Update(JsonElement source) {
         base.Update(source);
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
-        RemotePosition = new Vector2(source.GetFloat("x"), source.GetFloat("y"));
+        RemotePosition = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = null; // we handle this locally, and always ignore remote
     }
 
-    public void On(Inbound.CorrectionData evt)
-    {
-        Position = new Vector2(evt.X, evt.Y);
+    public void On(Inbound.CorrectionData evt) {
+        Position = new(evt.X, evt.Y);
         MovementPlan = null;
     }
 
-    public void On(Inbound.NewMapData evt)
-    {
+    public void On(Inbound.NewMapData evt) {
         MapName = evt.MapName;
         MapId = evt.MapId;
-        Position = new Vector2(evt.PlayerX, evt.PlayerY);
+        Position = new(evt.PlayerX, evt.PlayerY);
         MovementPlan = null;
     }
 }
