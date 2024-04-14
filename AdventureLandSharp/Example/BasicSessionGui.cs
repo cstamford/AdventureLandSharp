@@ -35,6 +35,11 @@ public class BasicSessionGui : IDisposable {
         DrawMapBoundaries(map);
         DrawMapConnections(map);
 
+        foreach (DropData drop in _socket.Drops) {
+            Raylib.DrawRectangle((int)drop.Position.X, (int)drop.Position.Y, 4, 4, Color.Brown);
+            Raylib.DrawText(drop.Id, (int)drop.Position.X, (int)drop.Position.Y - 16, 12, Color.Brown);
+        }
+
         foreach (Entity e in _socket.Entities) {
             Color col = e switch { 
                 Npc => Color.White,
@@ -58,12 +63,12 @@ public class BasicSessionGui : IDisposable {
             plan = modulator.Plan;
         }
 
-        if (player.MovementPlan is PathMovementPlan pathPlan) {
-            DrawPath([.. pathPlan.Path], Color.Green);
-        } else if (player.MovementPlan is ClickAheadMovementPlan clickAheadPlan) {
-            DrawPath([.. clickAheadPlan.Path], Color.Green);
-            Raylib.DrawLine((int)player.Position.X, (int)player.Position.Y, (int)clickAheadPlan.Goal.X, (int)clickAheadPlan.Goal.Y, Color.Lime);
-            Raylib.DrawCircle((int)clickAheadPlan.Goal.X, (int)clickAheadPlan.Goal.Y, 4, Color.Lime);
+        if (plan is PathMovementPlan path) {
+            DrawPath([.. path.Path], Color.Green);
+        } else if (plan is ClickAheadMovementPlan ca) {
+            DrawPath([.. ca.Path], Color.Green);
+            Raylib.DrawLine((int)player.Position.X, (int)player.Position.Y, (int)ca.Goal.X, (int)ca.Goal.Y, Color.Lime);
+            Raylib.DrawCircle((int)ca.Goal.X, (int)ca.Goal.Y, 4, Color.Lime);
         }
 
         Raylib.EndMode2D();
