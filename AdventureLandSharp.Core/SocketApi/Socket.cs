@@ -258,7 +258,7 @@ public class Socket : IDisposable {
         TimeSpan timeSinceLastMove = now.Subtract(_lastNetMove);
         TimeSpan moveInterval = TimeSpan.FromSeconds(1.0f / 10.0f);
 
-        if (_player.RemotePosition != _player.GoalPosition && timeSinceLastMove >= moveInterval) {
+        if (_player.GoalPosition != _player.RemoteGoalPosition && timeSinceLastMove >= moveInterval) {
             Emit<Outbound.Move>(new(
                 X: _player.Position.X,
                 Y: _player.Position.Y,
@@ -266,6 +266,7 @@ public class Socket : IDisposable {
                 TargetY: _player.GoalPosition.Y,
                 MapId: _player.MapId));
 
+            _player.RemoteGoalPosition = _player.GoalPosition;
             _lastNetMove = now;
         }
     }

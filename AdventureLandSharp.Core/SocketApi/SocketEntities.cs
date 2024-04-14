@@ -23,7 +23,9 @@ public abstract class Entity {
     public float DPS => AttackDamage / AttackSpeed;
 
     public virtual string Name => _name;
+
     public string Id { get; protected set; }
+    public string Type { get; protected set; }
     public Vector2 Position { get; protected set; }
     public Vector2? GoingPosition { get; protected set; }
     public EntityVitals Vitals { get; protected set; }
@@ -33,6 +35,7 @@ public abstract class Entity {
 
     public Entity(JsonElement source) {
         Id = source.GetString("id");
+        Type = source.GetString("type", Id);
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
         Vitals = source.Deserialize<EntityVitals>();
@@ -43,6 +46,7 @@ public abstract class Entity {
 
     public Entity(JsonElement source, GameDataMonster monsterDef) {
         Id = source.GetString("id");
+        Type = source.GetString("type", Id);
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
         Vitals = new EntityVitals(monsterDef).Update(source);
@@ -109,25 +113,27 @@ public class Player(JsonElement source) : Entity(source) {
 }
 
 public sealed class LocalPlayer(JsonElement source) : Player(source) {
-    public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
     public string MapName { get; private set; } = source.GetString("map");
     public long MapId { get; private set; } = source.GetLong("m");
 
     public PlayerInventory Inventory { get; private set; } = source.Deserialize<PlayerInventory>();
     public PlayerEquipment Equipment { get; private set; } = source.GetProperty("slots").Deserialize<PlayerEquipment>();
-    public Vector2 RemotePosition { get; set; } = new(source.GetFloat("x"), source.GetFloat("y"));
+
+    // This is the position that the player is currently moving towards.
+    public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
+
+    // This is the last GoalPosition that was sent to the server.
+    public Vector2? RemoteGoalPosition { get; set;} = null;
 
     public override void Update(JsonElement source) {
         base.Update(source);
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
-        RemotePosition = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = null; // we handle this locally, and always ignore remote
     }
 
     public void On(Inbound.CorrectionData evt) {
         Position = new(evt.X, evt.Y);
-        RemotePosition = Position;
         MovementPlan = null;
     }
 
@@ -135,7 +141,6 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         MapName = evt.MapName;
         MapId = evt.MapId;
         Position = new(evt.PlayerX, evt.PlayerY);
-        RemotePosition = Position;
         MovementPlan = null;
     }
 }
