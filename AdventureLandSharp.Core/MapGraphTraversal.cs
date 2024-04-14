@@ -20,6 +20,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
         if (CurrentEdgeFinished) {
             _edge = null;
             _edgeUpdate = now;
+            Player.MovementPlan = null;
         }
 
         _edge ??= _edges.Dequeue();
@@ -60,9 +61,9 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
     private void ProcessEdge() {
         if (_edge is MapGraphEdgeInterMap interMap) {
             if (interMap.Type is MapConnectionType.Door or MapConnectionType.Transporter) {
-                EmitAndClearMovement<Outbound.Transport>(new(interMap.Dest.Map.Name, interMap.DestSpawnId));
+                socket.Emit<Outbound.Transport>(new(interMap.Dest.Map.Name, interMap.DestSpawnId));
             } else if (interMap.Type is MapConnectionType.Leave) {
-                EmitAndClearMovement<Outbound.Leave>(new());
+                socket.Emit<Outbound.Leave>(new());
             } else {
                 throw new NotImplementedException($"Unknown inter-map edge type: {interMap.Type}");
             }
@@ -72,22 +73,17 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
             }
         } else if (_edge is MapGraphEdgeTeleport) {
-            EmitAndClearMovement<Outbound.Town>(new());
+            socket.Emit<Outbound.Town>(new());
         } else {
             throw new NotImplementedException($"Unknown edge type: {_edge}");
         }
     }
 
-    private void EmitAndClearMovement<T>(T data) where T: struct {
-        socket.Emit(data);
-        Player.MovementPlan = null;
-    }
-
     private MapGraphEdgeIntraMap ProcessEdge_TrimIntraMap(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
             float cuttableDistance = nextEdgeInter.Type switch {
-                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon,
-                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon,
+                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon*2,
+                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon*2,
                 _ => 0.0f
             };
 

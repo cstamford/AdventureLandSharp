@@ -296,6 +296,76 @@ public readonly record struct PlayerEquipment(
     [property: JsonPropertyName("cape")] Item? Cape
 );
 
+public readonly record struct PlayerBank(
+    [property: JsonPropertyName("gold")] long Gold,
+    [property: JsonPropertyName("items0")] Item?[]? Tab0,
+    [property: JsonPropertyName("items1")] Item?[]? Tab1,
+    [property: JsonPropertyName("items2")] Item?[]? Tab2,
+    [property: JsonPropertyName("items3")] Item?[]? Tab3,
+    [property: JsonPropertyName("items4")] Item?[]? Tab4,
+    [property: JsonPropertyName("items5")] Item?[]? Tab5,
+    [property: JsonPropertyName("items6")] Item?[]? Tab6,
+    [property: JsonPropertyName("items7")] Item?[]? Tab7,
+    [property: JsonPropertyName("items8")] Item?[]? Tab8,
+    [property: JsonPropertyName("items9")] Item?[]? Tab9,
+    [property: JsonPropertyName("items10")] Item?[]? Tab10,
+    [property: JsonPropertyName("items11")] Item?[]? Tab11,
+    [property: JsonPropertyName("items12")] Item?[]? Tab12,
+    [property: JsonPropertyName("items13")] Item?[]? Tab13,
+    [property: JsonPropertyName("items14")] Item?[]? Tab14,
+    [property: JsonPropertyName("items15")] Item?[]? Tab15,
+    [property: JsonPropertyName("items16")] Item?[]? Tab16,
+    [property: JsonPropertyName("items17")] Item?[]? Tab17,
+    [property: JsonPropertyName("items18")] Item?[]? Tab18,
+    [property: JsonPropertyName("items19")] Item?[]? Tab19,
+    [property: JsonPropertyName("items20")] Item?[]? Tab20,
+    [property: JsonPropertyName("items21")] Item?[]? Tab21,
+    [property: JsonPropertyName("items22")] Item?[]? Tab22,
+    [property: JsonPropertyName("items23")] Item?[]? Tab23,
+    [property: JsonPropertyName("items24")] Item?[]? Tab24,
+    [property: JsonPropertyName("items25")] Item?[]? Tab25,
+    [property: JsonPropertyName("items26")] Item?[]? Tab26,
+    [property: JsonPropertyName("items27")] Item?[]? Tab27,
+    [property: JsonPropertyName("items28")] Item?[]? Tab28,
+    [property: JsonPropertyName("items29")] Item?[]? Tab29,
+    [property: JsonPropertyName("items30")] Item?[]? Tab30,
+    [property: JsonPropertyName("items31")] Item?[]? Tab31,
+    [property: JsonPropertyName("items32")] Item?[]? Tab32,
+    [property: JsonPropertyName("items33")] Item?[]? Tab33,
+    [property: JsonPropertyName("items34")] Item?[]? Tab34,
+    [property: JsonPropertyName("items35")] Item?[]? Tab35,
+    [property: JsonPropertyName("items36")] Item?[]? Tab36,
+    [property: JsonPropertyName("items37")] Item?[]? Tab37,
+    [property: JsonPropertyName("items38")] Item?[]? Tab38,
+    [property: JsonPropertyName("items39")] Item?[]? Tab39,
+    [property: JsonPropertyName("items40")] Item?[]? Tab40,
+    [property: JsonPropertyName("items41")] Item?[]? Tab41,
+    [property: JsonPropertyName("items42")] Item?[]? Tab42,
+    [property: JsonPropertyName("items43")] Item?[]? Tab43,
+    [property: JsonPropertyName("items44")] Item?[]? Tab44,
+    [property: JsonPropertyName("items45")] Item?[]? Tab45,
+    [property: JsonPropertyName("items46")] Item?[]? Tab46,
+    [property: JsonPropertyName("items47")] Item?[]? Tab47
+) {
+    private Item?[]? this[string tabName] => this.GetType().GetProperty(tabName)?.GetValue(this) as Item?[];
+
+    public int GetTabNumberForDeposit(Item item) {
+        for (int i = 0; i < 48; ++i) {
+            Item?[]? tab = this[$"Tab{i}"];
+            
+            if (tab == null) {
+                continue;
+            }
+
+            if (tab.Count(x => x != null) < 42) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+}
+
 public readonly record struct PlayerInventory(
     [property: JsonPropertyName("gold")] long Gold,
     [property: JsonPropertyName("items")] List<Item?> Items)
@@ -305,7 +375,13 @@ public readonly record struct PlayerInventory(
         Items = source.TryGetProperty("items", out JsonElement items) ? items.Deserialize<List<Item?>>()! : Items
     };
 
-    public readonly int FindSlotId(string name) => Items.FindIndex(item => item?.Name == name);
+    public readonly int FindSlotId(string name) => Items.FindIndex(item =>
+        item?.Name == name);
+
+    public readonly int FindSlotId(string name, Func<Item, bool> pred) => Items.FindIndex(item => 
+        item != null &&
+        item.Value.Name == name &&
+        pred(item.Value));
 }
 
 public readonly record struct StatusEffect(

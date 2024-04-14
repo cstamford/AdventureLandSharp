@@ -25,6 +25,21 @@ public static class Outbound {
         [property: JsonPropertyName("no_graphics")] bool NoGraphics
     );
 
+    [OutboundSocketMessage("bank")]
+    public readonly record struct BankDeposit(
+        [property: JsonPropertyName("inv")] long InventoryIdx,
+        [property: JsonPropertyName("pack")] string TabPackIdx,
+        [property: JsonPropertyName("str")] long TabItemIdx
+    ) {
+        public BankDeposit(long inventorySlot, long storageSlot) : this(
+            InventoryIdx: inventorySlot,
+            TabPackIdx: $"items{storageSlot}",
+            TabItemIdx: -1) 
+        { }
+        [property: JsonPropertyName("operation")] public string Operation { get; } = "swap";
+
+    }
+
     [OutboundSocketMessage("buy")]
     public readonly record struct Buy(
         [property: JsonPropertyName("name")] string Name,

@@ -20,14 +20,14 @@ public class BasicCharacter : ICharacter {
 
             // If we're at very low health, drink a potion if we can, then disconnect.
             new If(() => Me.HealthPercent <= 15, new Selector( 
-                new Do(ConsumePotions),
+                ConsumePotions(),
                 new Do(() => _running = false))),
 
             // If we're in the middle of teleporting, let's avoid doing anything else.
             new If(() => _traversal.CurrentEdge is MapGraphEdgeTeleport, new Success()),
 
             // If we need to drink a potion, do it.
-            new Do(ConsumePotions),
+            ConsumePotions(),
 
             // If we have any enemies within attack range, bash them.
             new Do(AttackNearbyEnemy)
@@ -95,43 +95,77 @@ public class BasicCharacter : ICharacter {
         return Status.Fail;
     }
 
-    private Status ConsumePotions() {
-        if (_healPotionCd.Ready) {
-            int hpSlotId = Me.Inventory.FindSlotId("hpot0");
-            int mpSlotId = Me.Inventory.FindSlotId("mpot0");
+    private ConsumePotionsNode ConsumePotions() => new(() => (_socket, Me));
+}
 
-            int? equipSlotId = null;
-            string? useId = null;
+public class ConsumeElixirNode(
+    Func<(Socket socket, LocalPlayer me)> fnGetSelf,
+    string elixir
+) : INode {
+    public Status Tick() {
+        (Socket socket, LocalPlayer me) = fnGetSelf();
 
-            if (Me.HealthPercent < 65 && hpSlotId != -1) {
-                equipSlotId = hpSlotId;
-            } else if (Me.ManaPercent < 65 && mpSlotId != -1) {
-                equipSlotId = mpSlotId;
-            } else if (Me.ManaPercent < 90) {
-                useId = "mp";
-            } else if (Me.HealthPercent < 90) {
-                useId = "hp";
-            } else if (Me.ManaPercent < 100) {
-                useId = "mp";
-            } else if (Me.HealthPercent < 100) {
-                useId = "hp";
-            }
-
-            if (equipSlotId != null) {
-                _socket.Emit(new Outbound.Equip(equipSlotId.Value));
-                _healPotionCd.Restart(TimeSpan.FromSeconds(2));
-                return Status.Success;
-            }
-
-            if (useId != null) {
-                _socket.Emit(new Outbound.Use(useId));
-                _healPotionCd.Restart(TimeSpan.FromSeconds(4));
+        if (_cd.Ready) {
+            int slotId = me.Inventory.FindSlotId(elixir);
+            if (slotId != -1) {
+                socket.Emit(new Outbound.Equip(slotId));
+                _cd.Restart();
                 return Status.Success;
             }
         }
 
         return Status.Fail;
     }
+
+    private readonly Cooldown _cd = new(TimeSpan.FromSeconds(2));
+}
+
+public class ConsumePotionsNode(
+    Func<(Socket socket, LocalPlayer me)> fnGetSelf,
+    string healthPot = "hpot0",
+    string manaPot = "mpot0"
+) : INode {
+    public Status Tick() {
+        (Socket socket, LocalPlayer me) = fnGetSelf();
+
+        if (_cd.Ready) {
+            int hpSlotId = me.Inventory.FindSlotId(healthPot);
+            int mpSlotId = me.Inventory.FindSlotId(manaPot);
+
+            int? equipSlotId = null;
+            string? useId = null;
+
+            if (me.HealthPercent < 65 && hpSlotId != -1) {
+                equipSlotId = hpSlotId;
+            } else if (me.ManaPercent < 65 && mpSlotId != -1) {
+                equipSlotId = mpSlotId;
+            } else if (me.ManaPercent < 90) {
+                useId = "mp";
+            } else if (me.HealthPercent < 90) {
+                useId = "hp";
+            } else if (me.ManaPercent < 100) {
+                useId = "mp";
+            } else if (me.HealthPercent < 100) {
+                useId = "hp";
+            }
+
+            if (equipSlotId != null) {
+                socket.Emit(new Outbound.Equip(equipSlotId.Value));
+                _cd.Restart(TimeSpan.FromSeconds(2));
+                return Status.Success;
+            }
+
+            if (useId != null) {
+                socket.Emit(new Outbound.Use(useId));
+                _cd.Restart(TimeSpan.FromSeconds(4));
+                return Status.Success;
+            }
+        }
+
+        return Status.Fail;
+    }
+
+    private readonly Cooldown _cd = new(TimeSpan.FromSeconds(4));
 }
 
 public class Cooldown(TimeSpan cd) {

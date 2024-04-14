@@ -113,6 +113,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
 
     public PlayerInventory Inventory { get; private set; } = source.Deserialize<PlayerInventory>();
     public PlayerEquipment Equipment { get; private set; } = source.GetProperty("slots").Deserialize<PlayerEquipment>();
+    public PlayerBank? Bank { get; private set; } = ReadPlayerBank(source);
 
     // This is the position that the player is currently moving towards.
     public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
@@ -124,6 +125,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         base.Update(source);
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
+        Bank = ReadPlayerBank(source);
         GoingPosition = null; // we handle this locally, and always ignore remote
     }
 
@@ -142,5 +144,13 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         MapId = evt.MapId;
         Position = new(evt.PlayerX, evt.PlayerY);
         MovementPlan = null;
+    }
+
+    private static PlayerBank? ReadPlayerBank(JsonElement source) {
+        if (source.TryGetProperty("user", out JsonElement user) && user.ValueKind == JsonValueKind.Object) {
+            return user.Deserialize<PlayerBank>();
+        }
+
+        return null;
     }
 }
