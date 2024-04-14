@@ -115,11 +115,11 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
     public Vector2 OriginalGoal => _pathMovementPlan.Goal;
 
     public bool Update(double dt, double speed) { 
+        bool finished = _pathMovementPlan.Update(dt, speed);
         _clickAheadPoint = Path.Count > 1 && OriginalGoal != Position ? 
             CalculateClickAheadPoint(OriginalGoal, (float)speed) :
             OriginalGoal;
-    
-        return _pathMovementPlan.Update(dt, speed);
+        return finished;
     }
 
     private readonly PathMovementPlan _pathMovementPlan = new(start, path);
