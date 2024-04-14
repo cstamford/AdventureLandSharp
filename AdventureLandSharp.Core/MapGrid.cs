@@ -72,6 +72,7 @@ public class MapGrid {
     public const int CellSize = 8;
     public const int CellWallUnwalkable = 6;
     public const int CellWallAvoidance = CellSize;
+    public static readonly float CellWorldEpsilon = MathF.Sqrt(CellSize*CellSize + CellSize*CellSize);
 
     public MapGrid(GameDataMap mapData, GameLevelGeometry mapGeometry) {
         _terrain = CreateTerrain(mapData, mapGeometry);
@@ -368,3 +369,4 @@ public class MapGrid {
         }
     }
 }
+

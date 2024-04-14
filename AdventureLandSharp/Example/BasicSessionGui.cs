@@ -103,13 +103,13 @@ public class BasicSessionGui : IDisposable {
         for (int x = 0; x < map.Grid.Width; x++) {
             for (int y = 0; y < map.Grid.Height; y++) {
                 MapGridCell cell = new(x, y);
-                Vector2 pos = map.Grid.GridToWorld(cell);
+                Vector2 pos = cell.World(map);
 
                 if (pos.X < camMinX || pos.X > camMaxX || pos.Y < camMinY || pos.Y > camMaxY) {
                     continue;
                 }
 
-                if (map.Grid.IsWalkable(pos)) {
+                if (pos.IsWalkable(map)) {
                     Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
                 }
             }

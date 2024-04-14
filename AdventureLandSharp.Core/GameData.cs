@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -91,7 +92,19 @@ public readonly record struct GameDataMapMonster(
     [property: JsonPropertyName("position")] double[]? Position,
     [property: JsonPropertyName("radius")] double? Radius,
     [property: JsonPropertyName("count")] double Count
-);
+) {
+    public Vector2 GetSpawnPosition() {
+        if (Boundary is { Length: 4 }) {
+            return new((float)(Boundary[0] + Boundary[2]) / 2, (float)(Boundary[1] + Boundary[3]) / 2);
+        }
+
+        if (Position is { Length: 2 }) {
+            return new((float)Position[0], (float)Position[1]);
+        }
+
+        throw new("No spawn position available.");
+    }
+};
 
 public readonly record struct GameDataMapNpc(
     [property: JsonPropertyName("name")] string Name,

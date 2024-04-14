@@ -31,8 +31,8 @@ public class PathfindingController(World world) : ControllerBase {
             for (int y = 0; y < grid.Height; ++y) {
                 for (int x = 0; x < grid.Width; ++x) {
                     MapGridCell cell = new(x, y);
-                    walkable.Add(grid.IsWalkable(cell));
-                    cost.Add(grid.Cost(cell));
+                    walkable.Add(cell.IsWalkable(grid));
+                    cost.Add(cell.Cost(grid));
                 }
             }
 
@@ -68,8 +68,8 @@ public class PathfindingController(World world) : ControllerBase {
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult Path(PathRequest req) {
         if (world.TryGetMap(req.Source.Map, out Map sourceMap) && world.TryGetMap(req.Dest.Map, out Map destMap)) {
-            MapGridCell startLocation = sourceMap.Grid.WorldToGrid(req.Source.Location);
-            MapGridCell endLocation = destMap.Grid.WorldToGrid(req.Dest.Location);
+            MapGridCell startLocation = req.Source.Location.Grid(sourceMap);
+            MapGridCell endLocation = req.Dest.Location.Grid(destMap);
 
             MapLocation start = new(sourceMap, req.Source.Location);
             MapLocation end = new(destMap, req.Dest.Location);

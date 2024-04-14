@@ -73,7 +73,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         return edges.Select(e => CopyEdgeWithRamp(e, start, goal));
     }
 
-    public Vector2 FindNearestWalkable(Vector2 world) => _grid.GridToWorld(_grid.FindNearestWalkable(_grid.WorldToGrid(world)));
+    public Vector2 FindNearestWalkable(Vector2 world) => _grid.FindNearestWalkable(world.Grid(this)).World(this);
 
     private readonly MapGrid _grid = new(mapData, mapGeometry);
     private readonly MapConnections _connections = new(mapName, gameData, mapData);
@@ -87,11 +87,11 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
                 Path = new(intraEdge.Path)
             };
 
-            if (intraEdge.Path[0] != start && Grid.IsWalkable(start)) {
+            if (intraEdge.Path[0] != start && start.IsWalkable(Grid)) {
                 copy.Path[0] = start;
             }
 
-            if (intraEdge.Path[^1] != goal && Grid.IsWalkable(goal)) {
+            if (intraEdge.Path[^1] != goal && goal.IsWalkable(Grid)) {
                 copy.Path[^1] = goal;
             }
 
@@ -104,4 +104,55 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
 
         throw new ArgumentException($"Unrecognised edge type: {edge.GetType()}");
     }
+}
+
+public static class Vector2Extensions {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Equivalent(this Vector2 a, Vector2 b) => a.Equivalent(b, MapGrid.CellWorldEpsilon);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Equivalent(this Vector2 a, Vector2 b, float epsilon) => Vector2.Distance(a, b) <= epsilon;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCell Grid(this Vector2 world, Map map) => world.Grid(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCell Grid(this Vector2 world, MapGrid grid) => grid.WorldToGrid(world);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsWalkable(this Vector2 world, Map map) => world.IsWalkable(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsWalkable(this Vector2 world, MapGrid grid) => grid.IsWalkable(world);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float Cost(this Vector2 world, Map map) => world.Cost(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float Cost(this Vector2 world, MapGrid grid) => grid.Cost(world);
+}
+
+public static class MapGridCellExtensions {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector2 World(this MapGridCell cell, Map map) => cell.World(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector2 World(this MapGridCell cell, MapGrid grid) => grid.GridToWorld(cell);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsWalkable(this MapGridCell cell, Map map) => cell.IsWalkable(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsWalkable(this MapGridCell cell, MapGrid grid) => grid.IsWalkable(cell);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float Cost(this MapGridCell cell, Map map) => cell.Cost(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float Cost(this MapGridCell cell, MapGrid grid) => grid.Cost(cell);
+}
+
+public static class MapLocationExtensions {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCell Grid(this MapLocation loc) => loc.Location.Grid(loc.Map);
 }

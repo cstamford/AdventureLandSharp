@@ -1,13 +1,14 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
-using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp;
 
 public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
-    public IMapGraphEdge? Edge => _edge;
+    public MapLocation Start => _start;
+    public MapLocation End => _end;
     public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
+    public IMapGraphEdge? CurrentEdge => _edge;
 
     public void Update() {
         if (Finished) {
@@ -31,22 +32,20 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
     
     private LocalPlayer Player => socket.Player;
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
+    private readonly MapLocation _start = edges.First().Source;
+    private readonly MapLocation _end = edges.Last().Dest;
 
     private bool CurrentEdgeFinished => _edge != null && _edge switch { 
         MapGraphEdgeInterMap interMap => 
             Player.MapName == interMap.Dest.Map.Name,
         MapGraphEdgeIntraMap intraMap => 
-            Equivalent(Player.Position, intraMap.Dest.Location) || 
-            Equivalent(Player.Position, _edge.Dest.Map.FindNearestWalkable(_edge.Dest.Location)),
+            Player.Position.Equivalent(intraMap.Dest.Location) || 
+            Player.Position.Equivalent(_edge.Dest.Map.FindNearestWalkable(_edge.Dest.Location)),
         MapGraphEdgeTeleport teleport => 
-            Equivalent(Player.Position, teleport.Dest.Location, MathF.Max(_cellSizeEpsilon, teleport.Dest.Map.DefaultSpawnScatter*2)),
+            Player.Position.Equivalent(teleport.Dest.Location, MathF.Max(MapGrid.CellWorldEpsilon, teleport.Dest.Map.DefaultSpawnScatter*2)),
         _ => true 
     };
 
-    private static readonly float _cellSizeEpsilon = MathF.Sqrt(
-        MapGrid.CellSize*MapGrid.CellSize + MapGrid.CellSize*MapGrid.CellSize);
-    private static bool Equivalent(Vector2 a, Vector2 b) => Equivalent(a, b, _cellSizeEpsilon);
-    private static bool Equivalent(Vector2 a, Vector2 b, float epsilon) => Vector2.Distance(a, b) <= epsilon;
 
     private IMapGraphEdge? _edge;
     private DateTimeOffset _edgeUpdate;
@@ -87,8 +86,8 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
     private MapGraphEdgeIntraMap ProcessEdge_TrimIntraMap(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
             float cuttableDistance = nextEdgeInter.Type switch {
-                MapConnectionType.Door => GameConstants.DoorDist - _cellSizeEpsilon*2,
-                MapConnectionType.Transporter => GameConstants.TransporterDist - _cellSizeEpsilon*2,
+                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon,
+                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon,
                 _ => 0.0f
             };
 
@@ -126,7 +125,7 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
     private Vector2 CalculateClickAheadPoint(Vector2 target, float speed) {
         Vector2 direction = Vector2.Normalize(target - Position);
         Vector2 clickAheadTarget = target + direction * speed * 0.33f;
-        MapGridLineOfSight los = map.Grid.LineOfSight(map.Grid.WorldToGrid(Position), map.Grid.WorldToGrid(clickAheadTarget));
-        return los.OccludedAt != null ? map.Grid.GridToWorld(los.OccludedAt.Value) : clickAheadTarget;
+        MapGridLineOfSight los = map.Grid.LineOfSight(Position.Grid(map), clickAheadTarget.Grid(map));
+        return los.OccludedAt?.World(map) ?? clickAheadTarget;
     }
 }

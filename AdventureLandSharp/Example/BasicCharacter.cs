@@ -24,7 +24,7 @@ public class BasicCharacter : ICharacter {
                 new Do(() => _running = false))),
 
             // If we're in the middle of teleporting, let's avoid doing anything else.
-            new If(() => _traversal.Edge is MapGraphEdgeTeleport, new Success()),
+            new If(() => _traversal.CurrentEdge is MapGraphEdgeTeleport, new Success()),
 
             // If we need to drink a potion, do it.
             new Do(ConsumePotions),
