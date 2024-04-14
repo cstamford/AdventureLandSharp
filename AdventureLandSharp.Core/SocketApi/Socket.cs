@@ -127,12 +127,6 @@ public class Socket : IDisposable {
     private List<string> _party = [];
     private LocalPlayer _player = default!;
 
-    private void Recv(Inbound.ChestOpenedData evt) {
-        if (evt.Gone) {
-            _drops.Remove(evt.Id);
-        }
-    }
-
     private void Recv(Inbound.CorrectionData evt) {
         _player.On(evt);
     }
@@ -141,10 +135,8 @@ public class Socket : IDisposable {
         if (evt.Id == _player.Id) {
             _player.On(evt);
         }
-        
-        if (_entities.TryGetValue(evt.Id, out Entity? e)) {
-            e.On(evt);
-        }
+
+        _entities.Remove(evt.Id);
     }
 
     private void Recv(Inbound.DisappearData evt) {
@@ -155,6 +147,10 @@ public class Socket : IDisposable {
         if (evt.Owners.Contains(_player.OwnerId)) {
             _drops.Add(evt.Id, new(evt.Id, evt.X, evt.Y));
         }
+    }
+
+    private void Recv(Inbound.ChestOpenedData evt) {
+        _drops.Remove(evt.Id);
     }
 
     private void Recv(Inbound.EntitiesData evt) {

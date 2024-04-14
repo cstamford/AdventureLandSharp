@@ -67,7 +67,7 @@ public static class Outbound {
         [property: JsonPropertyName("m")] long MapId
     );
 
-    [OutboundSocketMessage("loot")]
+    [OutboundSocketMessage("open_chest")]
     public readonly record struct OpenChest(
         [property: JsonPropertyName("id")] string Id
     );

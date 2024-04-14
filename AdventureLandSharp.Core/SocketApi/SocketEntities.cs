@@ -83,11 +83,6 @@ public abstract class Entity {
         }
     }
 
-    public void On(Inbound.DeathData evt) {
-        Debug.Assert(evt.Id == Id);
-        Vitals = Vitals with { Dead = true };
-    }
-
     private readonly string _name;
 
     private static Vector2? ParseGoingPosition(JsonElement source) =>
@@ -135,6 +130,11 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public void On(Inbound.CorrectionData evt) {
         Position = new(evt.X, evt.Y);
         MovementPlan = null;
+    }
+
+    public void On(Inbound.DeathData evt) {
+        Debug.Assert(evt.Id == Id);
+        Vitals = Vitals with { Dead = true };
     }
 
     public void On(Inbound.NewMapData evt) {
