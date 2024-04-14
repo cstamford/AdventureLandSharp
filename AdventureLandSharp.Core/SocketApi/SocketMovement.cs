@@ -9,6 +9,10 @@ public interface ISocketEntityMovementPlan {
     public bool Update(double dt, double speed);
 }
 
+public interface ISocketEntityMovementPlanModulator : ISocketEntityMovementPlan {
+    public ISocketEntityMovementPlan Plan { get; }
+}
+
 public class DestinationMovementPlan(Vector2 start, Vector2 goal) : ISocketEntityMovementPlan {
     public bool Finished => start == goal;
     public Vector2 Position => start;

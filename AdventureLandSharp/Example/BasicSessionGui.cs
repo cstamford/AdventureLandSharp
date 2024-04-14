@@ -53,6 +53,11 @@ public class BasicSessionGui : IDisposable {
 
         Raylib.DrawCircle((int)player.Position.X, (int)player.Position.Y, 4, Color.SkyBlue);
 
+        ISocketEntityMovementPlan? plan = player.MovementPlan;
+        while (plan is ISocketEntityMovementPlanModulator modulator) {
+            plan = modulator.Plan;
+        }
+
         if (player.MovementPlan is PathMovementPlan pathPlan) {
             DrawPath([.. pathPlan.Path], Color.Green);
         } else if (player.MovementPlan is ClickAheadMovementPlan clickAheadPlan) {
