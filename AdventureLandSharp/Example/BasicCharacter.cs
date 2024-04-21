@@ -87,7 +87,7 @@ public class BasicCharacter : ICharacter {
 
             if (target != null) {
                 _socket.Emit(new Outbound.Attack(target.Id));
-                _attackCd.Restart(TimeSpan.FromSeconds(Me.AttackSpeed));
+                _attackCd.Restart(Me.AttackSpeed);
                 return Status.Success;
             }
         }

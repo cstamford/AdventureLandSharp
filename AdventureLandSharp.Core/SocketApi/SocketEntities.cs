@@ -18,9 +18,9 @@ public abstract class Entity {
 
     public float Speed => Stats.Speed;
     public float AttackDamage => Stats.AttackDamage;
-    public float AttackSpeed => Stats.AttackFrequency;
+    public TimeSpan AttackSpeed => TimeSpan.FromMilliseconds(1000.0 / Stats.AttackFrequency);
     public float AttackRange => Stats.AttackRange;
-    public float DPS => AttackDamage / AttackSpeed;
+    public float DPS => (float)(AttackDamage / AttackSpeed.TotalSeconds);
 
     public virtual string Name => _name;
 
