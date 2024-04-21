@@ -15,7 +15,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
             return;
         }
 
-        DateTimeOffset now = DateTimeOffset.Now;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
 
         if (CurrentEdgeFinished) {
             _edge = null;

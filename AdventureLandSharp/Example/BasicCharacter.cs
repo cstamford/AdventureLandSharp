@@ -1,6 +1,7 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
+using AdventureLandSharp.Helpers;
 using AdventureLandSharp.Interfaces;
 using AdventureLandSharp.Utility;
 
@@ -95,89 +96,4 @@ public class BasicCharacter : ICharacter {
     }
 
     private ConsumePotionsNode ConsumePotions() => new(() => (_socket, Me));
-}
-
-public class ConsumeElixirNode(
-    Func<(Socket socket, LocalPlayer me)> fnGetSelf,
-    string? elixir = null
-) : INode {
-    public Status Tick() {
-        (Socket socket, LocalPlayer me) = fnGetSelf();
-
-        if (_cd.Ready) {
-            int slotId = elixir == null ? -1 : me.Inventory.FindSlotId(elixir);
-
-            if (slotId != -1) {
-                socket.Emit(new Outbound.Equip(slotId));
-                _cd.Restart();
-                return Status.Success;
-            }
-        }
-
-        return Status.Fail;
-    }
-
-    private readonly Cooldown _cd = new(TimeSpan.FromSeconds(2));
-}
-
-public class ConsumePotionsNode(
-    Func<(Socket socket, LocalPlayer me)> fnGetSelf,
-    string? healthPot = "hpot0",
-    string? manaPot = "mpot0"
-) : INode {
-    public Status Tick() {
-        (Socket socket, LocalPlayer me) = fnGetSelf();
-
-        if (_cd.Ready) {
-            int hpSlotId = healthPot == null ? -1 : me.Inventory.FindSlotId(healthPot);
-            int mpSlotId = manaPot == null ? -1 : me.Inventory.FindSlotId(manaPot);
-
-            int? equipSlotId = null;
-            string? useId = null;
-
-            if (me.HealthPercent < 65 && hpSlotId != -1) {
-                equipSlotId = hpSlotId;
-            } else if (me.ManaPercent < 65 && mpSlotId != -1) {
-                equipSlotId = mpSlotId;
-            } else if (me.ManaPercent < 90) {
-                useId = "mp";
-            } else if (me.HealthPercent < 90) {
-                useId = "hp";
-            } else if (me.ManaPercent < 100) {
-                useId = "mp";
-            } else if (me.HealthPercent < 100) {
-                useId = "hp";
-            }
-
-            if (equipSlotId != null) {
-                socket.Emit(new Outbound.Equip(equipSlotId.Value));
-                _cd.Restart(TimeSpan.FromSeconds(2));
-                return Status.Success;
-            }
-
-            if (useId != null) {
-                socket.Emit(new Outbound.Use(useId));
-                _cd.Restart(TimeSpan.FromSeconds(4));
-                return Status.Success;
-            }
-        }
-
-        return Status.Fail;
-    }
-
-    private readonly Cooldown _cd = new(TimeSpan.FromSeconds(4));
-}
-
-public class Cooldown(TimeSpan cd) {
-    public TimeSpan Duration { get; set; } = cd;
-    public TimeSpan Remaining => _start.Add(Duration).Subtract(DateTimeOffset.Now);
-    public bool Ready => Remaining <= TimeSpan.Zero;
-    
-    public void Restart() => _start = DateTimeOffset.Now;
-    public void Restart(TimeSpan duration) {
-        Duration = duration;
-        _start = DateTimeOffset.Now;
-    }
-
-    private DateTimeOffset _start = DateTimeOffset.MinValue;
 }
