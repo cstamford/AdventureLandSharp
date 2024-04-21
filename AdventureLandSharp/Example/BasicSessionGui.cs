@@ -48,28 +48,13 @@ public class BasicSessionGui : IDisposable {
                 _ => throw new()
             };
 
-            if (e.MovementPlan != null) {
-                Raylib.DrawLine((int)e.Position.X, (int)e.Position.Y, (int)e.MovementPlan.Goal.X, (int)e.MovementPlan.Goal.Y, col);
-            }
-
+            DrawMovementPlanForEntity(e);
             Raylib.DrawCircle((int)e.Position.X, (int)e.Position.Y, 4, col);
             Raylib.DrawText(e.Name, (int)e.Position.X, (int)e.Position.Y - 16, 12, col);
         }
 
         Raylib.DrawCircle((int)player.Position.X, (int)player.Position.Y, 4, Color.SkyBlue);
-
-        ISocketEntityMovementPlan? plan = player.MovementPlan;
-        while (plan is ISocketEntityMovementPlanModulator modulator) {
-            plan = modulator.Plan;
-        }
-
-        if (plan is PathMovementPlan path) {
-            DrawPath([.. path.Path], Color.Green);
-        } else if (plan is ClickAheadMovementPlan ca) {
-            DrawPath([.. ca.Path], Color.Green);
-            Raylib.DrawLine((int)player.Position.X, (int)player.Position.Y, (int)ca.Goal.X, (int)ca.Goal.Y, Color.Lime);
-            Raylib.DrawCircle((int)ca.Goal.X, (int)ca.Goal.Y, 4, Color.Lime);
-        }
+        DrawMovementPlanForEntity(player);
 
         Raylib.EndMode2D();
         Raylib.DrawFPS(8, 8);
@@ -135,7 +120,34 @@ public class BasicSessionGui : IDisposable {
 
     private static void DrawPath(IReadOnlyList<Vector2> path, Color color) {
         for (int i = 0; i < path.Count - 1; i++) {
-            Raylib.DrawLineEx(path[i], path[i+1], 4.0f, color);
+            Raylib.DrawLineEx(path[i], path[i+1], 1, color);
+            Raylib.DrawCircle((int)path[i].X, (int)path[i].Y, 2, color);
+        }
+
+        Vector2 last = path[^1];
+        Raylib.DrawCircle((int)last.X, (int)last.Y, 2, color);
+    }
+
+    private static void DrawMovementPlanForEntity(Entity e) {
+        ISocketEntityMovementPlan? plan = e.MovementPlan;
+        while (plan is ISocketEntityMovementPlanModulator modulator) {
+            plan = modulator.Plan;
+        }
+
+        Queue<Vector2> path = plan switch {
+            PathMovementPlan planPath => planPath.Path,
+            ClickAheadMovementPlan planCa => planCa.Path,
+            _ => []
+        };
+
+        if (path.Count > 0) {
+            Raylib.DrawLineEx(e.Position, path.Peek(), 1, Color.Green);
+            DrawPath([.. path], Color.Green);
+        }
+
+        if (plan is ClickAheadMovementPlan ca) {
+            Raylib.DrawLineEx(ca.OriginalGoal, ca.Goal, 1, Color.Lime);
+            Raylib.DrawCircle((int)ca.Goal.X, (int)ca.Goal.Y, 2, Color.Lime);
         }
     }
 }
