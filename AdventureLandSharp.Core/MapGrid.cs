@@ -211,7 +211,7 @@ public class MapGrid {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public MapGridLineOfSight LineOfSight(MapGridCell start, MapGridCell end) {
+    public MapGridLineOfSight LineOfSight(MapGridCell start, MapGridCell end, bool costChangeIsOccluder = false) {
         int x0 = start.X;
         int y0 = start.Y;
         int x1 = end.X;
@@ -224,11 +224,12 @@ public class MapGrid {
         int err = dx - dy;
 
         MapGridCell last = new(x0, y0);
+        float cost = Cost(last);
 
         while (true) {
             MapGridCell cur = new(x0, y0);
 
-            if (!IsWalkable(cur)) {
+            if (!IsWalkable(cur) || (costChangeIsOccluder && cost != Cost(cur))) {
                 return new(start, end, last);
             }
 

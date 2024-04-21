@@ -69,8 +69,11 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
             }
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
             if (Player.MovementPlan == null) {
-                _edge = ProcessEdge_TrimIntraMap(intraMap); // note: updates intraMap.Path in-place
+                intraMap = ProcessEdge_MapTransitionDistanceSkip(intraMap);
+                intraMap = ProcessEdge_LineOfSightStartSkip(intraMap);
+
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
+                _edge = intraMap;
             }
         } else if (_edge is MapGraphEdgeTeleport) {
             socket.Emit<Outbound.Town>(new());
@@ -79,7 +82,10 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
         }
     }
 
-    private MapGraphEdgeIntraMap ProcessEdge_TrimIntraMap(MapGraphEdgeIntraMap edge) {
+    // Given an intra-map edge, trim the path to the next door or transporter based on the next edge.
+    // This allows us to skip walking right to the end of the edge to use e.g. a door which has a useable distance.
+    // Note: updates edge.Path in-place.
+    private MapGraphEdgeIntraMap ProcessEdge_MapTransitionDistanceSkip(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
             float cuttableDistance = nextEdgeInter.Type switch {
                 MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon*2,
@@ -97,6 +103,31 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
                 Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
                 return edge with { Dest = edge.Dest with { Location = newLocation } };
             }
+        }
+
+        return edge;
+    }
+
+    // Given an intra-map edge, skips the first nodes until the player no longer has line of sight.
+    // This allows us to avoid useless steps (e.g. go backwards and then forwards again) between edges, for example,
+    // when teleporting and then being scattered backwards.
+    // Note: Updates edge.Path in-place
+    private MapGraphEdgeIntraMap ProcessEdge_LineOfSightStartSkip(MapGraphEdgeIntraMap edge) {
+        int edgeLosIdx = 0;
+        MapGridCell edgeLosStart = Player.Position.Grid(edge.Source.Map);
+
+        while (++edgeLosIdx < edge.Path.Count) {
+            MapGridCell edgeLosEnd = edge.Path[edgeLosIdx].Grid(edge.Source.Map);
+            MapGridLineOfSight los = edge.Source.Map.Grid.LineOfSight(edgeLosStart, edgeLosEnd, costChangeIsOccluder: true);
+
+            if (los.OccludedAt != null) {
+                break;
+            }
+        }
+
+        if (edgeLosIdx > 1) {
+            edge.Path.RemoveRange(0, edgeLosIdx - 1);
+            return edge with { Source = edge.Source with { Location = edge.Path[0] } };
         }
 
         return edge;
