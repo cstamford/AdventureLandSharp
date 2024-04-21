@@ -152,6 +152,13 @@ public static class Inbound {
         [property: JsonPropertyName("name")] string Name
     );
 
+    [InboundSocketMessage("limitdcreport")]
+    public readonly record struct LimitDcReportData(
+        [property: JsonPropertyName("calls")] JsonElement Calls,
+        [property: JsonPropertyName("climit")] int UsedCallCost,
+        [property: JsonPropertyName("total")] int TotalCalls
+    );
+
     [InboundSocketMessage("magiport")]
     public readonly record struct MagiportData(
         [property: JsonPropertyName("name")] string Name

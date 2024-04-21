@@ -185,6 +185,10 @@ public class Socket : IDisposable {
         }
     }
 
+    private void Recv(Inbound.LimitDcReportData evt) {
+        Log.Info($"Limit DC Report: {evt}");
+    }
+
     private void Recv(Inbound.NewMapData evt) {
         _player.On(evt);
         Recv(evt.Entities);
