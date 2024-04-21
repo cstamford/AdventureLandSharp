@@ -35,14 +35,20 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         Vector2 startWalkable = FindNearestWalkable(start);
         Vector2 goalWalkable = FindNearestWalkable(goal);
 
-        (Vector2, Vector2) pathCacheKey = (startWalkable, goalWalkable);
-
-        if (_pathCache.TryGetValue(pathCacheKey, out IEnumerable<IMapGraphEdge>? cachedPath)) { // TODO: Dynamic costs...
-            return cachedPath.Select(e => CopyEdgeWithRamp(e, start, goal));
-        }
-
         MapLocation startMapLoc = new(this, start);
         MapLocation goalMapLoc = new(this, goal);
+
+        if (startWalkable == goalWalkable) {
+            // If the start and end point are the same, just return a single edge with the two points.
+            // We do this so that we can distinguish between an "already there" result and a "no path" reslt.
+            return [new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [start, goal], 0)];
+        }
+
+        (Vector2, Vector2) pathCacheKey = (startWalkable, goalWalkable);
+
+        if (_pathCache.TryGetValue(pathCacheKey, out IEnumerable<IMapGraphEdge>? cachedPath)) {
+            return cachedPath.Select(e => CopyEdgeWithRamp(e, start, goal));
+        }
 
         MapGridPathSettings settings = heuristic != null ? new(heuristic.Value) : new();
         Task<MapGridPath> pathTask = Task.Run(() => Grid.IntraMap_AStar(startWalkable, goalWalkable, settings));
@@ -52,6 +58,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         MapGridPath teleportPath = teleportPathTask.Result;
 
         if (path.Points.Count == 0 && teleportPath.Points.Count == 0) {
+            // If we can't find a path to the goal or the teleport location, we return an empty list to signify a failure.
             return [];
         }
 
