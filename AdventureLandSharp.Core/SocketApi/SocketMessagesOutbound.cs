@@ -31,13 +31,13 @@ public static class Outbound {
         [property: JsonPropertyName("pack")] string TabPackIdx,
         [property: JsonPropertyName("str")] long TabItemIdx
     ) {
+        [property: JsonPropertyName("operation")] public string Operation { get; } = "swap";
+
         public BankDeposit(long inventorySlot, long storageSlot) : this(
             InventoryIdx: inventorySlot,
             TabPackIdx: $"items{storageSlot}",
             TabItemIdx: -1) 
         { }
-        [property: JsonPropertyName("operation")] public string Operation { get; } = "swap";
-
     }
 
     [OutboundSocketMessage("buy")]

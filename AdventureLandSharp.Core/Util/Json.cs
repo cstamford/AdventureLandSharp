@@ -56,12 +56,20 @@ public static class JsonExtensions {
         return source.TryGetProperty(key, out JsonElement data) ? data.TryGetSingle(out float value) ? value : defaultValue : defaultValue;
     }
 
-    public static double Getfloat(this JsonElement source, string key) {
+    public static double GetDouble(this JsonElement source, string key) {
         return source.TryGetProperty(key, out JsonElement value) ? value.GetDouble() : throw new ArgumentException($"Key '{key}' not found in source.");
     }
 
-    public static double Getfloat(this JsonElement source, string key, float defaultValue) {
+    public static double GetDouble(this JsonElement source, string key, float defaultValue) {
         return source.TryGetProperty(key, out JsonElement data) ? data.TryGetDouble(out double value) ? value : defaultValue : defaultValue;
+    }
+
+    public static int GetInt(this JsonElement source, string key) {
+        return source.TryGetProperty(key, out JsonElement value) ? value.GetInt32() : throw new ArgumentException($"Key '{key}' not found in source.");
+    }
+
+    public static int GetInt(this JsonElement source, string key, int defaultValue) {
+        return source.TryGetProperty(key, out JsonElement data) ? data.TryGetInt32(out int value) ? value : defaultValue : defaultValue;
     }
 
     public static long GetLong(this JsonElement source, string key) {

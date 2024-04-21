@@ -28,6 +28,7 @@ public abstract class Entity {
     public string Type { get; protected set; }
     public Vector2 Position { get; protected set; }
     public Vector2? GoingPosition { get; protected set; }
+    public int Level { get; protected set; }
     public EntityVitals Vitals { get; protected set; }
     public EntityStats Stats { get; protected set; } 
     public StatusEffects StatusEffects { get; protected set; }
@@ -38,6 +39,7 @@ public abstract class Entity {
         Type = source.GetString("type", Id);
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
+        Level = source.GetInt("level", 0);
         Vitals = source.Deserialize<EntityVitals>();
         Stats = source.Deserialize<EntityStats>();
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
@@ -49,6 +51,7 @@ public abstract class Entity {
         Type = source.GetString("type", Id);
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
+        Level = source.GetInt("level", 0);
         Vitals = new EntityVitals(monsterDef).Update(source);
         Stats = new EntityStats(monsterDef).Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
@@ -58,6 +61,7 @@ public abstract class Entity {
     public virtual void Update(JsonElement source) {
         Position = new(source.GetFloat("x"), source.GetFloat("y"));
         GoingPosition = ParseGoingPosition(source);
+        Level = source.GetInt("level", Level);
         Vitals = Vitals.Update(source);
         Stats = Stats.Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();

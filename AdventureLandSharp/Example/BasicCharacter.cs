@@ -61,7 +61,6 @@ public class BasicCharacter : ICharacter {
     private readonly INode _btMovement;
 
     private readonly Cooldown _attackCd = new(default);
-    private readonly Cooldown _healPotionCd = new(TimeSpan.FromSeconds(4));
 
     private MapGraphTraversal GetRandomTraversal() {
         MapLocation[] interestingGoals = [
@@ -100,13 +99,14 @@ public class BasicCharacter : ICharacter {
 
 public class ConsumeElixirNode(
     Func<(Socket socket, LocalPlayer me)> fnGetSelf,
-    string elixir
+    string? elixir = null
 ) : INode {
     public Status Tick() {
         (Socket socket, LocalPlayer me) = fnGetSelf();
 
         if (_cd.Ready) {
-            int slotId = me.Inventory.FindSlotId(elixir);
+            int slotId = elixir == null ? -1 : me.Inventory.FindSlotId(elixir);
+
             if (slotId != -1) {
                 socket.Emit(new Outbound.Equip(slotId));
                 _cd.Restart();
@@ -122,15 +122,15 @@ public class ConsumeElixirNode(
 
 public class ConsumePotionsNode(
     Func<(Socket socket, LocalPlayer me)> fnGetSelf,
-    string healthPot = "hpot0",
-    string manaPot = "mpot0"
+    string? healthPot = "hpot0",
+    string? manaPot = "mpot0"
 ) : INode {
     public Status Tick() {
         (Socket socket, LocalPlayer me) = fnGetSelf();
 
         if (_cd.Ready) {
-            int hpSlotId = me.Inventory.FindSlotId(healthPot);
-            int mpSlotId = me.Inventory.FindSlotId(manaPot);
+            int hpSlotId = healthPot == null ? -1 : me.Inventory.FindSlotId(healthPot);
+            int mpSlotId = manaPot == null ? -1 : me.Inventory.FindSlotId(manaPot);
 
             int? equipSlotId = null;
             string? useId = null;
