@@ -347,22 +347,40 @@ public readonly record struct PlayerBank(
     [property: JsonPropertyName("items46")] Item?[]? Tab46,
     [property: JsonPropertyName("items47")] Item?[]? Tab47
 ) {
-    private Item?[]? this[string tabName] => this.GetType().GetProperty(tabName)?.GetValue(this) as Item?[];
+    public Item?[]? this[int tab] => GetTab(tab);
 
-    public int GetTabNumberForDeposit(Item item) {
-        for (int i = 0; i < 48; ++i) {
-            Item?[]? tab = this[$"Tab{i}"];
-            
-            if (tab == null) {
-                continue;
-            }
+    public Item?[]? GetTab(int tab) => tab switch {
+        0 => Tab0,   1 => Tab1,   2 => Tab2,   3 => Tab3,   4 => Tab4,   5 => Tab5,
+        6 => Tab6,   7 => Tab7,   8 => Tab8,   9 => Tab9,   10 => Tab10, 11 => Tab11,
+        12 => Tab12, 13 => Tab13, 14 => Tab14, 15 => Tab15, 16 => Tab16, 17 => Tab17,
+        18 => Tab18, 19 => Tab19, 20 => Tab20, 21 => Tab21, 22 => Tab22, 23 => Tab23,
+        24 => Tab24, 25 => Tab25, 26 => Tab26, 27 => Tab27, 28 => Tab28, 29 => Tab29,
+        30 => Tab30, 31 => Tab31, 32 => Tab32, 33 => Tab33, 34 => Tab34, 35 => Tab35,
+        36 => Tab36, 37 => Tab37, 38 => Tab38, 39 => Tab39, 40 => Tab40, 41 => Tab41,
+        42 => Tab42, 43 => Tab43, 44 => Tab44, 45 => Tab45, 46 => Tab46, 47 => Tab47,
+        _ => throw new ArgumentOutOfRangeException(nameof(tab))
+    };
 
-            if (tab.Count(x => x != null) < 42) {
-                return i;
-            }
+    public IEnumerable<Item?[]?> AllTabs => Enumerable.Range(0, 48).Select(GetTab);
+    public IEnumerable<(int Index, Item?[] Tab)> ValidTabs => AllTabs
+        .Select((tab, i) => (i, tab))
+        .Where(x => x.tab != null)
+        .Select(x => (x.i, x.tab!));
+
+    public static string GetMapNameForTabIdx(int tab) {
+        if (tab <= 7) {
+            return "bank";
+        } else if (tab <= 23) {
+            return "bank_b";
+        } else if (tab <= 47) {
+            return "bank_u";
         }
 
-        return -1;
+        throw new ArgumentOutOfRangeException(nameof(tab));
+    }
+
+    public static int GetFreeSlotsInTab(Item?[] tab) {
+        return 42 - tab.Count(x => x != null);
     }
 }
 
