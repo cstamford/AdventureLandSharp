@@ -34,13 +34,15 @@ public class ConsumePotionsNode(
 
             if (equipSlotId != null) {
                 socket.Emit(new Outbound.Equip(equipSlotId.Value));
-                _cd.Restart(TimeSpan.FromSeconds(2));
+                _cd.Duration = TimeSpan.FromSeconds(2);
+                _cd.Restart();
                 return Status.Success;
             }
 
             if (useId != null) {
                 socket.Emit(new Outbound.Use(useId));
-                _cd.Restart(TimeSpan.FromSeconds(4));
+                _cd.Duration = TimeSpan.FromSeconds(4);
+                _cd.Restart();
                 return Status.Success;
             }
         }

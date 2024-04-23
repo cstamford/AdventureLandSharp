@@ -9,6 +9,8 @@ namespace AdventureLandSharp.Example;
 
 // Implements a basic character that can attack enemies, consume potions, and path through the world.
 public class BasicCharacter : ICharacter {
+    public LocalPlayer Me => _socket.Player;
+
     public BasicCharacter(World world, Socket socket, CharacterClass cls) {
         _cls = cls;
         _world = world;
@@ -49,7 +51,6 @@ public class BasicCharacter : ICharacter {
         return _running;
     }
 
-    private LocalPlayer Me => _socket.Player;
     private IEnumerable<Monster> Enemies => _socket.Entities.OfType<Monster>();
 
     private readonly CharacterClass _cls;
@@ -87,7 +88,8 @@ public class BasicCharacter : ICharacter {
 
             if (target != null) {
                 _socket.Emit(new Outbound.Attack(target.Id));
-                _attackCd.Restart(Me.AttackSpeed);
+                _attackCd.Duration = Me.AttackSpeed;
+                _attackCd.Restart();
                 return Status.Success;
             }
         }

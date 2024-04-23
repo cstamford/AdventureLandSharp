@@ -14,6 +14,7 @@ public enum CharacterClass {
 };
 
 public interface ICharacter {
+    public LocalPlayer Me { get; }
     public bool Update();
 }
 

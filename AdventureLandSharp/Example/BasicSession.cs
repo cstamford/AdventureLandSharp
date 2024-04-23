@@ -14,6 +14,9 @@ public class BasicSession(
     CharacterFactory characterFactory,
     bool withGui) : ISession
 {
+    public event Action<Socket, ICharacter>? OnInit;
+    public event Action<Socket, ICharacter>? OnTick;
+
     public ConnectionSettings Settings => _settings;
 
     public void EnterUpdateLoop() {
@@ -75,6 +78,8 @@ public class BasicSession(
             _ => throw new()
         });
 
+        OnInit?.Invoke(_socket, character);
+
         while (_socket.Connected) {
             _socket.Update();
 
@@ -86,6 +91,7 @@ public class BasicSession(
                 return;
             }
 
+            OnTick?.Invoke(_socket, character);
             Thread.Yield();
         }
     }

@@ -100,6 +100,8 @@ public class Socket : IDisposable {
         return _connection.SocketIo!.EmitAsync(name, evt);
     }
 
+    public bool TryGetEntity(string id, out Entity e) => _entities.TryGetValue(id, out e!);
+
     public void Update() {
         _connection.Update();
 
@@ -205,15 +207,15 @@ public class Socket : IDisposable {
     private void Update_DrainRecvQueue() {
         while (_recvQueue.TryDequeue(out (string evt, MethodInfo method, object data) queued)) {
             try {
-                queued.method.Invoke(this, [queued.data]);
-            } catch (Exception ex) {
-                Log.Error($"(system) Error processing message {queued.evt}: {ex}");
-            }
-
-            try {
                 OnRecv?.Invoke(queued.evt, queued.data);
             } catch (Exception ex) {
                 Log.Error($"(user) Error processing message {queued.evt}: {ex}");
+            }
+
+            try {
+                queued.method.Invoke(this, [queued.data]);
+            } catch (Exception ex) {
+                Log.Error($"(system) Error processing message {queued.evt}: {ex}");
             }
         }
     }

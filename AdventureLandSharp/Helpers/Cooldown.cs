@@ -1,15 +1,31 @@
+using AdventureLandSharp.Utility;
+
 namespace AdventureLandSharp.Helpers;
 
-public class Cooldown(TimeSpan cd) {
-    public TimeSpan Duration { get; set; } = cd;
-    public TimeSpan Remaining => _start.Add(Duration).Subtract(DateTimeOffset.UtcNow);
-    public bool Ready => Remaining <= TimeSpan.Zero;
-    
-    public void Restart() => _start = DateTimeOffset.UtcNow;
-    public void Restart(TimeSpan duration) {
-        Duration = duration;
-        _start = DateTimeOffset.UtcNow;
+public class Cooldown(TimeSpan cd, float cdMulti = 1) {
+    public TimeSpan Duration {
+        get => cd * cdMulti;
+        set => cd = value;
+    }
+    public bool Ready => DateTimeOffset.UtcNow >= _end;
+    public void Restart() => _end = DateTimeOffset.UtcNow.Add(Duration);
+    private DateTimeOffset _end = DateTimeOffset.UtcNow;
+}
+
+public static class CooldownBtExtensions {
+    public static Status Then(this Cooldown cd, Func<Status> action) {
+        if (cd.Ready) {
+            Status status = action();
+
+            if (status == Status.Success) {
+                cd.Restart();
+            }
+
+            return status;
+        }
+
+        return Status.Fail;
     }
 
-    private DateTimeOffset _start = DateTimeOffset.MinValue;
+    public static Status Then(this Cooldown cd, INode node) => cd.Then(node.Tick);
 }
