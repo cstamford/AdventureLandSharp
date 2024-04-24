@@ -174,7 +174,7 @@ public static class Inbound {
         [property: JsonPropertyName("y")] float PlayerY
     );
 
-    [InboundSocketMessage("party_request")]
+    [InboundSocketMessage("request")]
     public readonly record struct PartyRequestData(
         [property: JsonPropertyName("name")] string Name
     );

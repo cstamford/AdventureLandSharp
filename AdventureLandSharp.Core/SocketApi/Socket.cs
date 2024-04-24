@@ -8,8 +8,10 @@ namespace AdventureLandSharp.Core.SocketApi;
 
 public class Socket : IDisposable {
     public bool Connected => _connection.Connected && _player.Id != string.Empty;
+
     public event Action<string, object>? OnEmit;
     public event Action<string, object>? OnRecv;
+    public event Action<Inbound.PartyRequestData>? OnPartyRequest;
 
     public LocalPlayer Player => _player;
     public IEnumerable<Entity> Entities => _entities.Values;
@@ -198,6 +200,10 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.PartyUpdateData evt) {
         _party = evt.Members ?? [];
+    }
+
+    private void Recv(Inbound.PartyRequestData evt) {
+        OnPartyRequest?.Invoke(evt);
     }
 
     private void Recv_Player(JsonElement data) {
