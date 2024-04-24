@@ -24,7 +24,8 @@ public class JsonConverterBool : JsonConverter<bool> {
     public override bool Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => 
         reader.TokenType == JsonTokenType.Number ? reader.GetInt32() == 1 : reader.GetBoolean();
     
-    public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options) => writer.WriteNumberValue(value ? 1 : 0);
+    public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options) =>
+        writer.WriteNumberValue(value ? 1 : 0);
 }
 
 public class JsonConverterVector2 : JsonConverter<Vector2> {
@@ -45,6 +46,14 @@ public class JsonConverterVector2 : JsonConverter<Vector2> {
         writer.WriteNumberValue(vector.Y);
         writer.WriteEndArray();
     }
+}
+
+public class JsonConverterArrayOrFalse<T> : JsonConverter<T[]> {
+    public override T[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => 
+        reader.TokenType == JsonTokenType.False ? [] : JsonSerializer.Deserialize<T[]>(ref reader, options);
+
+    public override void Write(Utf8JsonWriter writer, T[] value, JsonSerializerOptions options) =>
+        JsonSerializer.Serialize(writer, value, options);
 }
 
 public static class JsonExtensions {

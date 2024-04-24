@@ -181,7 +181,7 @@ public static class Inbound {
 
     [InboundSocketMessage("party_update")]
     public readonly record struct PartyUpdateData(
-        [property: JsonPropertyName("list")] List<string>? Members
+        [property: JsonConverter(typeof(JsonConverterArrayOrFalse<string>)), JsonPropertyName("list")] string[] Members
     );
 
     [InboundSocketMessage("server_message")]

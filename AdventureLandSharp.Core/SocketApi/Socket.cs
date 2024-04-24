@@ -128,7 +128,7 @@ public class Socket : IDisposable {
     private readonly Dictionary<string, Entity> _entities = [];
     private readonly Dictionary<string, DropData> _drops = [];
 
-    private List<string> _party = [];
+    private string[] _party = [];
     private LocalPlayer _player = default!;
 
     private void Recv(Inbound.CorrectionData evt) {
