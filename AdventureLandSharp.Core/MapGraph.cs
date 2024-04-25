@@ -80,52 +80,56 @@ public class MapGraph {
         Dictionary<MapLocation, float> dist = [];
         Dictionary<MapLocation, IMapGraphEdge> prev = [];
 
-        IEnumerable<IMapGraphEdge> startToGoal = start.Map == goal.Map ?
-            start.Map.FindPath(start.Location, goal.Location, heuristic) :
+        IMapGraphEdge[] startToGoal = start.Map == goal.Map ?
+            [..start.Map.FindPath(start.Location, goal.Location, heuristic)] :
             [];
 
-        IEnumerable<IMapGraphEdge> startToFirstVertex = _vertices
+        IMapGraphEdge[] startToFirstVertex = [.._vertices
             .AsParallel()
             .OrderByDescending(x => Vector2.Distance(start.Location, x.Location))
             .Where(x => x.Map == start.Map)
             .Select(x => x.Map.FindPath(start.Location, x.Location, heuristic))
             .Where(x => x.Any())
-            .SelectMany(x => x);
+            .SelectMany(x => x)];
 
-        IEnumerable<IMapGraphEdge> lastVertexToGoal = _vertices
+        IMapGraphEdge[] lastVertexToGoal = [.._vertices
             .AsParallel()
             .OrderByDescending(x => Vector2.Distance(x.Location, goal.Location))
             .Where(x => x.Map == goal.Map)
             .Select(x => x.Map.FindPath(x.Location, goal.Location, heuristic))
             .Where(x => x.Any())
-            .SelectMany(x => x);
+            .SelectMany(x => x)];
 
         dist[start] = 0;
         Q.Enqueue(start, 0);
 
         while (Q.TryDequeue(out MapLocation u, out float _)) {
-            IEnumerable<IMapGraphEdge> neighbors = _edges.TryGetValue(u, out HashSet<IMapGraphEdge>? edges) ? edges : [];
+            if (_edges.TryGetValue(u, out HashSet<IMapGraphEdge>? edges)) {
+                VisitEdges(edges);
+            }
 
             if (start.Map == goal.Map) {
-                neighbors = neighbors.Concat(startToGoal);
+                VisitEdges(startToGoal);
             }
 
             if (u == start) {
-                neighbors = neighbors.Concat(startToFirstVertex);
+                VisitEdges(startToFirstVertex);
             }
 
             if (u.Map == goal.Map) {
-                neighbors = neighbors.Concat(lastVertexToGoal).Where(x => x.Source == u);
+                VisitEdges(lastVertexToGoal.Where(x => x.Source == u));
             }
 
-            foreach (IMapGraphEdge edge in neighbors) {
-                MapLocation vLoc = edge.Dest;
-                float alt = 1 + dist[u] + (edge is MapGraphEdgeIntraMap intraMapEdge ? intraMapEdge.Cost : 1);
+            void VisitEdges(IEnumerable<IMapGraphEdge> edges) {
+                foreach (IMapGraphEdge edge in edges) {
+                    MapLocation vLoc = edge.Dest;
+                    float alt = 1 + dist[u] + (edge is MapGraphEdgeIntraMap intraMapEdge ? intraMapEdge.Cost : 1);
 
-                if (!dist.TryGetValue(vLoc, out float prevAlt) || alt < prevAlt) {
-                    prev[vLoc] = edge;
-                    dist[vLoc] = alt;
-                    Q.Enqueue(vLoc, alt);
+                    if (!dist.TryGetValue(vLoc, out float prevAlt) || alt < prevAlt) {
+                        prev[vLoc] = edge;
+                        dist[vLoc] = alt;
+                        Q.Enqueue(vLoc, alt);
+                    }
                 }
             }
         }
