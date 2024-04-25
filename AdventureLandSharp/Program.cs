@@ -1,24 +1,22 @@
 ﻿using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.HttpApi;
+using AdventureLandSharp.Helpers;
 using AdventureLandSharp.Interfaces;
 
-const string serverAddrLocal = "localhost:8083";
-const string serverAddrLive = "adventure.land";
 const string user = "dev";
 const string pass = "dev";
 
-ApiAddress apiAddr = new($"http://{serverAddrLocal}");
-GameData data = await Api.FetchGameDataAsync(apiAddr);
+GameData data = await Api.FetchGameDataAsync(Utils.ApiAddress);
 World world = new(data);
 
 ApiCredentials creds = new(user, pass);
-ApiAuthState auth = await Api.LoginAsync(apiAddr, creds);
+ApiAuthState auth = await Api.LoginAsync(Utils.ApiAddress, creds);
 
 if (!auth.Success) {
     throw new Exception("Failed to login.");
 }
 
-ServersAndCharactersResponse serversAndCharacters = await Api.ServersAndCharactersAsync(apiAddr);
+ServersAndCharactersResponse serversAndCharacters = await Api.ServersAndCharactersAsync(Utils.ApiAddress);
 ISessionCoordinator coordinator = DependencyResolver.SessionCoordinator()(world, auth, serversAndCharacters);
 List<RunningSession> sessions = [];
 
