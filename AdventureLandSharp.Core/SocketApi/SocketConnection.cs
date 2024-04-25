@@ -1,5 +1,7 @@
 using AdventureLandSharp.Core.HttpApi;
 using AdventureLandSharp.Core.Util;
+using SocketIOClient;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace AdventureLandSharp.Core.SocketApi;
@@ -53,15 +55,10 @@ public class Connection(ConnectionSettings settings) : IDisposable {
     private bool _ready;
 
     private void StartConnection() {
-        // Socket login flow.
-        // 1. Wait for "welcome" from server.
-        // 2. Emit "loaded".
-        // 3. Wait for "entities" from server.
-        // 4. Emit "auth".
-        // 5. Wait for "start" from server.
         _socketIo = new($"http://{settings.Server.Addr}:{settings.Server.Port}");
 
-        _socketIo.On("welcome", async _ => {
+        SafeSocketOn("welcome", async _ => {
+            Log.Info($"[{settings.Character.Name} CONN] Welcome message received. Responding with loaded message.");
             await _socketIo.EmitAsync("loaded", new Outbound.Loaded(
                 Success: true,
                 Width: 1920,
@@ -69,8 +66,10 @@ public class Connection(ConnectionSettings settings) : IDisposable {
                 Scale: 2));
         });
 
-        _socketIo.On("entities", async e => {
+        SafeSocketOn("entities", async e => {
             if (!_authenticated) {
+                Log.Info($"[{settings.Character.Name} CONN] Initial entities message received. Responding with auth message.");
+
                 await _socketIo.EmitAsync("auth", new Outbound.Auth(
                     AuthToken: settings.AuthToken,
                     CharacterId: settings.Character.Id,
@@ -86,7 +85,8 @@ public class Connection(ConnectionSettings settings) : IDisposable {
             }
         });
 
-        _socketIo.On("start", e => {
+        SafeSocketOn("start", e => {
+            Log.Info($"[{settings.Character.Name} CONN] Start message received.");
             OnConnected?.Invoke(e.GetValue<JsonElement>());
             _ready = true;
         });
@@ -102,6 +102,18 @@ public class Connection(ConnectionSettings settings) : IDisposable {
     private void HandleError(string type, object e) {
         Log.Error($"{type}: {e}");
         CloseExistingConnection();
+    }
+
+    private void SafeSocketOn(string name, Action<SocketIOResponse> cb) {
+        Debug.Assert(_socketIo != null);
+    
+        _socketIo.On(name, e => {
+            try {
+                cb(e);
+            } catch {
+                HandleError(name, e);
+            }
+        });
     }
 
     private void CloseExistingConnection() {

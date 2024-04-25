@@ -30,7 +30,7 @@ public class Socket : IDisposable {
         _connection = new(settings);
 
         _connection.OnConnected += (x) => {
-            Log.Info("Connected to server.");
+            Log.Info($"[{settings.Character.Name} CONN] Connected to server.");
 
             MethodInfo? recvPlayer = typeof(Socket).GetMethod(
                 nameof(Recv_Player),
@@ -47,7 +47,7 @@ public class Socket : IDisposable {
         };
 
         _connection.OnDisconnected += () => {
-            Log.Info("Disconnected from server.");
+            Log.Info($"[{settings.Character.Name} CONN] Disconnected from server.");
         };
 
         OnEmit += fnOnEmit;
@@ -64,7 +64,7 @@ public class Socket : IDisposable {
             .Where(x => x.method != null)
             .Select(x => (x.type, x.method!, x.name))
         ) {
-            Log.Info($"Registered message {name} to handler {method.Name}.");
+            Log.Info($"[{settings.Character.Name} CONN] Registered message {name} to handler {method.Name}.");
 
             MethodInfo? socketGetValueMethod = typeof(SocketIOClient.SocketIOResponse).GetMethod(
                 nameof(SocketIOClient.SocketIOResponse.GetValue),
@@ -77,9 +77,13 @@ public class Socket : IDisposable {
 
             _connection.OnConnected += _ => {
                 _connection.SocketIo!.On(name, e => {
-                    object? data = genericMethod.Invoke(e, [0]);
-                    Debug.Assert(data != null, "Could not get data from SocketIOResponse.");
-                    _recvQueue.Enqueue((name, method, data));
+                    try {
+                        object? data = genericMethod.Invoke(e, [0]);
+                        Debug.Assert(data != null, "Could not get data from SocketIOResponse.");
+                        _recvQueue.Enqueue((name, method, data));
+                    } catch (Exception ex) {
+                        Log.Error($"(system) Error processing message {name}: {ex}");
+                    }
                 });
             };
         }
