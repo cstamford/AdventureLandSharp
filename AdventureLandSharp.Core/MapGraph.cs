@@ -47,6 +47,11 @@ public class MapGraph {
                 }
             }
 
+            // Creating a vertex for every NPC, for similar reason to monsters.
+            foreach (GameDataMapNpc npc in map.Data.Npcs ?? []) {
+                //AddVertex(new(map, npc.GetPosition()));
+            }
+
             // Adding vertices for each connection point and creating edges between them.
             foreach (MapConnection connection in map.Connections) {
                 MapLocation from = new(maps[connection.SourceMap], new(connection.SourceX, connection.SourceY));

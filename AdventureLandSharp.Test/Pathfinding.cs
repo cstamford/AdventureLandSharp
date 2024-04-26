@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Numerics;
 using AdventureLandSharp.Core;
+using AdventureLandSharp.Helpers;
 
 namespace AdventureLandSharp.Test;
 
@@ -57,6 +58,17 @@ public class Pathfinding {
         Map halloween = InitWorld.World.GetMap("halloween");
         MapLocation start = new(halloween, new(0, 642.15f));
         MapLocation end = new(main, new(-35, -162));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
+
+    [TestMethod]
+    public void FindRoute_CrabToStore() {
+        Map main = InitWorld.World.GetMap("main");
+        MapLocation start = Utils.GetMapLocationForSpawn(InitWorld.World, "main", "crab");
+        MapLocation end = new(main, InitWorld.World.Data.Maps["main"].Npcs!.First(x => x.Id == "fancypots").GetPosition());
         IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
 
         Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));

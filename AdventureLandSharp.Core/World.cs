@@ -35,22 +35,15 @@ public class World {
             }
 
             int oneAfterMergeIdx = i + 1;
-            float totalCost = edge.Cost;
-            const float maxTotalCostForMerge = 100;
 
             while (oneAfterMergeIdx < edges.Count && 
                 edges[oneAfterMergeIdx] is MapGraphEdgeIntraMap nextEdge && 
-                nextEdge.Dest.Map == edge.Source.Map && 
-                totalCost + nextEdge.Cost <= maxTotalCostForMerge)
+                nextEdge.Dest.Map == edge.Source.Map)
             {
                 ++oneAfterMergeIdx;
-                totalCost += nextEdge.Cost;
             }
 
             if (oneAfterMergeIdx != i + 1) {
-                Debug.Assert(oneAfterMergeIdx <= edges.Count);
-                Debug.Assert(totalCost <= maxTotalCostForMerge);
-
                 MapLocation mergeStart = edge.Source;
                 MapLocation mergeGoal = edges[oneAfterMergeIdx - 1].Dest;
                 Debug.Assert(mergeStart.Map == mergeGoal.Map);
@@ -58,7 +51,7 @@ public class World {
                 MapGraphEdgeIntraMap? mergedEdge = mergeStart.Map.FindPath(
                     mergeStart.Location,
                     mergeGoal.Location,
-                    settings!.Value with { MaxCost = maxTotalCostForMerge });
+                    settings!.Value with { MaxCost = 100 });
 
                 if (mergedEdge != null) {
                     edges[i] = mergedEdge;
