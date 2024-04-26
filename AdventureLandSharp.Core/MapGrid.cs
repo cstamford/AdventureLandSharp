@@ -62,10 +62,12 @@ public readonly record struct MapGridCellData(bool Walkable, float Cost);
 
 public readonly record struct MapGridPath(float Cost, List<MapGridCell> Points);
 
-public readonly record struct MapGridPathSettings(MapGridHeuristic Heuristic, IReadOnlyDictionary<MapGridCell, float>? DynamicCosts) {
-    public MapGridPathSettings() : this(MapGridHeuristic.Diagonal, null) { }
-    public MapGridPathSettings(MapGridHeuristic heuristic) : this(heuristic, null) { }
-    public MapGridPathSettings(IReadOnlyDictionary<MapGridCell, float> dynamicCosts) : this(MapGridHeuristic.Diagonal, dynamicCosts) { }
+public readonly record struct MapGridPathSettings(
+    MapGridHeuristic Heuristic,
+    int? MaxSteps = null,
+    float? MaxCost = null) {
+    public MapGridPathSettings() : this(MapGridHeuristic.Diagonal, null, null) 
+    { }
 }
 
 public class MapGrid {
@@ -112,19 +114,16 @@ public class MapGrid {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float Cost(Vector2 pos) => Cost(WorldToGrid(pos));
 
-    public MapGridPath IntraMap_AStar(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) =>
+    public MapGridPath IntraMap_AStar(Vector2 start, Vector2 goal, MapGridPathSettings settings) =>
         IntraMap_AStar(WorldToGrid(start), WorldToGrid(goal), settings);
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public MapGridPath IntraMap_AStar(MapGridCell start, MapGridCell goal, MapGridPathSettings? settings = null) {
+    public MapGridPath IntraMap_AStar(MapGridCell start, MapGridCell goal, MapGridPathSettings settings) {
         Debug.Assert(IsWalkable(start) && IsWalkable(goal), "IntraMap_AStar requires start and goal to be walkable.");
 
         if (start == goal) {
             return new(0, []);
         }
-
-        MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
-        IReadOnlyDictionary<MapGridCell, float> dynamicCosts = settings?.DynamicCosts ?? new Dictionary<MapGridCell, float>();
 
         PriorityQueue<MapGridCell, float> queue = new();
         HashSet<MapGridCell> closed = [];
@@ -134,9 +133,17 @@ public class MapGrid {
 
         queue.Enqueue(start, 0);
 
-        while (queue.TryDequeue(out MapGridCell pos, out float _) && pos != goal) {
+        for (int steps = 0; queue.TryDequeue(out MapGridCell pos, out float _) && pos != goal; ++steps) {
             float runningCost = runningCosts[pos];
             closed.Add(pos);
+
+            if (settings.MaxSteps.HasValue && steps > settings.MaxSteps) {
+                break;
+            }
+
+            if (settings.MaxCost.HasValue && runningCost > settings.MaxCost) {
+                break;
+            }
 
             foreach (MapGridCell offset in _neighbourOffsets) {
                 MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
@@ -145,14 +152,9 @@ public class MapGrid {
                     continue;
                 }
 
-                float costToNeighbour = pos.Cost(neighbour, heuristic) * Cost(neighbour);
-
-                if (dynamicCosts.TryGetValue(neighbour, out float dynamicCost)) {
-                    costToNeighbour *= dynamicCost;
-                }
-
+                float costToNeighbour = pos.Cost(neighbour, settings.Heuristic) * Cost(neighbour);
                 float neighbourRunningCost = runningCost + costToNeighbour;
-                float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, heuristic);
+                float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, settings.Heuristic);
 
                 if (!runningCosts.TryGetValue(neighbour, out float currentRunningCost) || neighbourRunningCost < currentRunningCost) {
                     runningCosts[neighbour] = neighbourRunningCost;

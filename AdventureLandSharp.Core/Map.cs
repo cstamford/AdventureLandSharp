@@ -1,4 +1,3 @@
-
 using System.Collections.Concurrent;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -31,7 +30,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
     public float DefaultSpawnScatter => mapData.SpawnPositions[0].Length >= 3 ? (float)mapData.SpawnPositions[0][3] : 0;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public IEnumerable<IMapGraphEdge> FindPath(Vector2 start, Vector2 goal, MapGridHeuristic? heuristic = null) {
+    public MapGraphEdgeIntraMap? FindPath(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) {
         Vector2 startWalkable = FindNearestWalkable(start);
         Vector2 goalWalkable = FindNearestWalkable(goal);
 
@@ -39,77 +38,47 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         MapLocation goalMapLoc = new(this, goal);
 
         if (startWalkable == goalWalkable) {
-            // If the start and end point are the same, just return a single edge with the two points.
-            // We do this so that we can distinguish between an "already there" result and a "no path" reslt.
-            return [new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [start, goal], 0)];
+            return new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [start, goal], 0);
         }
 
         (Vector2, Vector2) pathCacheKey = (startWalkable, goalWalkable);
-
-        if (_pathCache.TryGetValue(pathCacheKey, out IEnumerable<IMapGraphEdge>? cachedPath)) {
-            return cachedPath.Select(e => CopyEdgeWithRamp(e, start, goal));
+        if (_pathCache.TryGetValue(pathCacheKey, out MapGraphEdgeIntraMap cachedEdge)) {
+            return CopyEdgeWithRamp(cachedEdge, start, goal);
         }
 
-        MapGridPathSettings settings = heuristic != null ? new(heuristic.Value) : new();
-        Task<MapGridPath> pathTask = Task.Run(() => Grid.IntraMap_AStar(startWalkable, goalWalkable, settings));
-        Task<MapGridPath> teleportPathTask = Task.Run(() => Grid.IntraMap_AStar(FindNearestWalkable(DefaultSpawn.Location), goalWalkable, settings));
-
-        MapGridPath path = pathTask.Result;
-        MapGridPath teleportPath = teleportPathTask.Result;
-
-        if (path.Points.Count == 0 && teleportPath.Points.Count == 0) {
-            // If we can't find a path to the goal or the teleport location, we return an empty list to signify a failure.
-            return [];
+        MapGridPath path = Grid.IntraMap_AStar(startWalkable, goalWalkable, settings ?? new());
+        if (path.Points.Count == 0) {
+            return null;
         }
 
-        float pathCost = pathTask.Result.Cost;
-        float teleportCost = teleportPathTask.Result.Cost + 25;
-
-        bool useRegularPath = path.Points.Count > 0 && (teleportPath.Points.Count == 0 || pathCost < teleportCost);
-
-        MapGraphEdgeIntraMap pathEdge = useRegularPath ? 
-            new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [..path.Points.Select(Grid.GridToWorld)], pathCost) :
-            new MapGraphEdgeIntraMap(DefaultSpawn, goalMapLoc, [..teleportPath.Points.Select(Grid.GridToWorld)], teleportCost);
-
-        IEnumerable<IMapGraphEdge> edges = useRegularPath ? 
-            [pathEdge] :
-            [new MapGraphEdgeTeleport(startMapLoc, DefaultSpawn), pathEdge];
-
-        _pathCache.TryAdd(pathCacheKey, edges);
-
-        return edges.Select(e => CopyEdgeWithRamp(e, start, goal));
+        MapGraphEdgeIntraMap edge = new(startMapLoc, goalMapLoc, [..path.Points.Select(Grid.GridToWorld)], path.Cost);
+        _pathCache.TryAdd(pathCacheKey, edge);
+    
+        return CopyEdgeWithRamp(edge, start, goal);
     }
 
     public Vector2 FindNearestWalkable(Vector2 world) => _grid.FindNearestWalkable(world.Grid(this)).World(this);
 
     private readonly MapGrid _grid = new(mapData, mapGeometry);
     private readonly MapConnections _connections = new(mapName, gameData, mapData);
-    private readonly ConcurrentDictionary<(Vector2, Vector2), IEnumerable<IMapGraphEdge>> _pathCache = [];
+    private readonly ConcurrentDictionary<(Vector2, Vector2), MapGraphEdgeIntraMap> _pathCache = [];
 
-    public IMapGraphEdge CopyEdgeWithRamp(IMapGraphEdge edge, Vector2 start, Vector2 goal) {
-        if (edge is MapGraphEdgeIntraMap intraEdge) {
-            MapGraphEdgeIntraMap copy = intraEdge with { 
-                Source = new(intraEdge.Source.Map, start),
-                Dest = new(intraEdge.Dest.Map, goal),
-                Path = new(intraEdge.Path)
-            };
+    private MapGraphEdgeIntraMap CopyEdgeWithRamp(MapGraphEdgeIntraMap edge, Vector2 start, Vector2 goal) {
+        MapGraphEdgeIntraMap copy = edge with { 
+            Source = new(edge.Source.Map, start),
+            Dest = new(edge.Dest.Map, goal),
+            Path = new(edge.Path)
+        };
 
-            if (intraEdge.Path[0] != start && start.IsWalkable(Grid)) {
-                copy.Path[0] = start;
-            }
-
-            if (intraEdge.Path[^1] != goal && goal.IsWalkable(Grid)) {
-                copy.Path[^1] = goal;
-            }
-
-            return copy;
+        if (edge.Path[0] != start && start.IsWalkable(Grid)) {
+            copy.Path[0] = start;
         }
 
-        if (edge is MapGraphEdgeTeleport teleportEdge) {
-            return teleportEdge with { Source = new(teleportEdge.Source.Map, start) };
-        } 
+        if (edge.Path[^1] != goal && goal.IsWalkable(Grid)) {
+            copy.Path[^1] = goal;
+        }
 
-        throw new ArgumentException($"Unrecognised edge type: {edge.GetType()}");
+        return copy;
     }
 }
 

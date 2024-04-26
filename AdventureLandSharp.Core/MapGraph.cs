@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Numerics;
 
 namespace AdventureLandSharp.Core;
@@ -33,103 +34,94 @@ public class MapGraph {
     public IReadOnlyDictionary<MapLocation, HashSet<IMapGraphEdge>> Edges => _edges;
 
     public MapGraph(IReadOnlyDictionary<string, Map> maps) {
-        // Add a vertex for every connection point between areas, and add an edge between each connection.
-        foreach (MapConnection connection in maps.SelectMany(x => x.Value.Connections)) {
-            MapLocation from = new(maps[connection.SourceMap], new(connection.SourceX, connection.SourceY));
-            MapLocation to = new(maps[connection.DestMap], new(connection.DestX, connection.DestY));
-
-            AddVertex(from);
-            AddVertex(to);
-
-            AddEdge(new MapGraphEdgeInterMap(from, to, connection.DestSpawnId, connection.Type));
-        }
-
-        // Add a vertex for each default spawn (teleport location) for each area.
         foreach (Map map in maps.Values) {
+            // Creating a vertex for the teleport destination of each map.
             AddVertex(map.DefaultSpawn);
+
+            // Adding vertices for each connection point and creating edges between them.
+            foreach (MapConnection connection in map.Connections) {
+                MapLocation from = new(maps[connection.SourceMap], new(connection.SourceX, connection.SourceY));
+                AddVertex(from);
+
+                MapLocation to = new(maps[connection.DestMap], new(connection.DestX, connection.DestY));
+                AddVertex(to);
+
+                AddEdge(new MapGraphEdgeInterMap(from, to, connection.DestSpawnId, connection.Type));
+            }
         }
 
-        ThreadLocal<List<IMapGraphEdge>> edges = new(() => [], trackAllValues: true);
+        foreach (IGrouping<Map, MapLocation> vertices in _vertices.GroupBy(x => x.Map)) {
+            Map map = vertices.Key;
+            ConcurrentBag<IMapGraphEdge> edges = [];
 
-        // Compute edges between all vertices in the same area.
-        Parallel.ForEach(_vertices.GroupBy(x => x.Map).Select(x => x.ToList()), vertsInMap => {
-            Map map = vertsInMap[0].Map;
-
-            Parallel.For(0, vertsInMap.Count, i => {
-                List<IMapGraphEdge> storage = edges.Value!;
-                
-                for (int j = i + 1; j < vertsInMap.Count; ++j) {
-                    MapLocation from = vertsInMap[i];
-                    MapLocation to = vertsInMap[j];
-
-                    storage.AddRange([
-                        ..map.FindPath(from.Location, to.Location),
-                        ..map.FindPath(to.Location, from.Location)
-                    ]);
-                }
+            // Creating an edge between each pair of vertices.
+            Parallel.ForEach(vertices, u => {
+                Parallel.ForEach(vertices, v => {
+                    if (v == map.DefaultSpawn) {
+                        // Teleport edge where the destination is the default spawn of the map.
+                        edges.Add(new MapGraphEdgeTeleport(u, v));
+                    } else if (u != v) {
+                        // Intra-map edge.
+                        MapGraphEdgeIntraMap? edge = map.FindPath(u.Location, v.Location);
+                        if (edge?.Cost > 0) {
+                            edges.Add(edge!);
+                        }
+                    }
+                });
             });
-        });
 
-        foreach (IMapGraphEdge edge in edges.Values.SelectMany(x => x)) {
-            AddEdge(edge);
-        }
+            foreach (IMapGraphEdge edge in edges) {
+                AddEdge(edge);
+            }
+        };
     }
 
-    public List<IMapGraphEdge> InterMap_Djikstra(MapLocation start, MapLocation goal, MapGridHeuristic heuristic) {
+    public List<IMapGraphEdge> InterMap_Djikstra(MapLocation start, MapLocation goal, MapGridPathSettings settings) {
         PriorityQueue<MapLocation, float> Q = new();
         Dictionary<MapLocation, float> dist = [];
         Dictionary<MapLocation, IMapGraphEdge> prev = [];
 
-        IMapGraphEdge[] startToGoal = start.Map == goal.Map ?
-            [..start.Map.FindPath(start.Location, goal.Location, heuristic)] :
-            [];
-
-        IMapGraphEdge[] startToFirstVertex = [.._vertices
-            .AsParallel()
-            .OrderByDescending(x => Vector2.Distance(start.Location, x.Location))
+        // Get the nearest vertex to the start and goal locations.
+        MapLocation rampOn = _vertices
             .Where(x => x.Map == start.Map)
-            .Select(x => x.Map.FindPath(start.Location, x.Location, heuristic))
-            .Where(x => x.Any())
-            .SelectMany(x => x)];
+            .OrderBy(x => Vector2.Distance(start.Location, x.Location))
+            .First();
 
-        IMapGraphEdge[] lastVertexToGoal = [.._vertices
-            .AsParallel()
-            .OrderByDescending(x => Vector2.Distance(x.Location, goal.Location))
+        MapLocation rampOff = _vertices
             .Where(x => x.Map == goal.Map)
-            .Select(x => x.Map.FindPath(x.Location, goal.Location, heuristic))
-            .Where(x => x.Any())
-            .SelectMany(x => x)];
+            .OrderBy(x => Vector2.Distance(goal.Location, x.Location))
+            .First();
+
+        // Generate a path from start to rampOn, and from rampOff to goal.
+        // Note that they will be null if these vertices are the same as the start or goal (e.g. already in graph).
+        MapGraphEdgeIntraMap? startToRampOn = start.Map.FindPath(start.Location, rampOn.Location, settings);
+        MapGraphEdgeIntraMap? rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
 
         dist[start] = 0;
         Q.Enqueue(start, 0);
 
-        while (Q.TryDequeue(out MapLocation u, out float _)) {
-            if (_edges.TryGetValue(u, out HashSet<IMapGraphEdge>? edges)) {
-                VisitEdges(edges);
-            }
+        while (Q.TryDequeue(out MapLocation u, out float _) && u != goal) {
+            bool isStart = u == start && startToRampOn.HasValue;
+            bool isRampOff = u == rampOff && rampOffToGoal.HasValue;
 
-            if (start.Map == goal.Map) {
-                VisitEdges(startToGoal);
-            }
+            IEnumerable<IMapGraphEdge> edges = (isStart || isRampOff) ? [
+                isStart ? startToRampOn!.Value : rampOffToGoal!.Value,
+                new MapGraphEdgeTeleport(u, u.Map.DefaultSpawn)
+            ] : _edges[u];
 
-            if (u == start) {
-                VisitEdges(startToFirstVertex);
-            }
+            foreach (IMapGraphEdge edge in edges) {
+                MapLocation vLoc = edge.Dest;
 
-            if (u.Map == goal.Map) {
-                VisitEdges(lastVertexToGoal.Where(x => x.Source == u));
-            }
+                float alt = 1 + dist[u] + (edge switch {
+                    MapGraphEdgeIntraMap intra => intra.Cost,
+                    MapGraphEdgeTeleport => 25,
+                    _ => 1
+                });
 
-            void VisitEdges(IEnumerable<IMapGraphEdge> edges) {
-                foreach (IMapGraphEdge edge in edges) {
-                    MapLocation vLoc = edge.Dest;
-                    float alt = 1 + dist[u] + (edge is MapGraphEdgeIntraMap intraMapEdge ? intraMapEdge.Cost : 1);
-
-                    if (!dist.TryGetValue(vLoc, out float prevAlt) || alt < prevAlt) {
-                        prev[vLoc] = edge;
-                        dist[vLoc] = alt;
-                        Q.Enqueue(vLoc, alt);
-                    }
+                if (!dist.TryGetValue(vLoc, out float prevAlt) || alt < prevAlt) {
+                    prev[vLoc] = edge;
+                    dist[vLoc] = alt;
+                    Q.Enqueue(vLoc, alt);
                 }
             }
         }
