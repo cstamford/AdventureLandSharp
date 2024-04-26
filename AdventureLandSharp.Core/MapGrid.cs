@@ -19,10 +19,10 @@ public readonly record struct MapGridLineOfSight(
     MapGridCell? OccludedAt
 );
 
-public readonly record struct MapGridCell(int X, int Y) : IComparable<MapGridCell> {
+public readonly record struct MapGridCell(ushort X, ushort Y) {
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public MapGridCell(Vector2 grid)
-        : this((int)(grid.X + 0.5f), (int)(grid.Y + 0.5f)) { }
+    public MapGridCell(int x, int y) : this((ushort)x, (ushort)y) 
+    { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public float Cost(MapGridCell other, MapGridHeuristic heuristic) => heuristic switch {
@@ -52,10 +52,7 @@ public readonly record struct MapGridCell(int X, int Y) : IComparable<MapGridCel
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public int CompareTo(MapGridCell other) {
-        int xComparison = X.CompareTo(other.X);
-        return xComparison == 0 ? Y.CompareTo(other.Y) : xComparison;
-    }
+    public override int GetHashCode() => X | (Y << 16);
 }
 
 public readonly record struct MapGridCellData(bool Walkable, float Cost);
@@ -65,7 +62,8 @@ public readonly record struct MapGridPath(float Cost, List<MapGridCell> Points);
 public readonly record struct MapGridPathSettings(
     MapGridHeuristic Heuristic,
     int? MaxSteps = null,
-    float? MaxCost = null) {
+    float? MaxCost = null)
+{
     public MapGridPathSettings() : this(MapGridHeuristic.Diagonal, null, null) 
     { }
 }
@@ -123,14 +121,13 @@ public class MapGrid {
         Debug.Assert(start != goal, "IntraMap_AStar requires start and goal to be different.");
 
         PriorityQueue<MapGridCell, float> Q = new();
-        Dictionary<MapGridCell, float> dist = [];
-        Dictionary<MapGridCell, MapGridCell> prev = [];
+        Dictionary<MapGridCell, (float RunningCost, MapGridCell Cell)> dict = [];
 
-        dist[start] = 0;
+        dict[start] = (0, start);
         Q.Enqueue(start, 0);
 
         for (int steps = 0; Q.TryDequeue(out MapGridCell pos, out float _) && pos != goal; ++steps) {
-            float runningCost = dist[pos];
+            float runningCost = dict[pos].RunningCost;
 
             if (settings.MaxSteps.HasValue && steps > settings.MaxSteps) {
                 break;
@@ -151,25 +148,24 @@ public class MapGrid {
                 float neighbourRunningCost = runningCost + costToNeighbour;
                 float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, settings.Heuristic);
 
-                if (!dist.TryGetValue(neighbour, out float currentRunningCost) || neighbourRunningCost < currentRunningCost) {
-                    prev[neighbour] = pos;
-                    dist[neighbour] = neighbourRunningCost;
+                if (!dict.TryGetValue(neighbour, out (float RunningCost, MapGridCell Cell) cur) || neighbourRunningCost < cur.RunningCost) {
+                    dict[neighbour] = (neighbourRunningCost, pos);
                     Q.Enqueue(neighbour, neighbourTotalCost);
                 }
             }
         }
 
-        if (dist.TryGetValue(goal, out float _)) {
+        if (dict.TryGetValue(goal, out _)) {
             List<MapGridCell> path = [];
             MapGridCell current = goal;
 
-            while (prev.TryGetValue(current, out MapGridCell cell)) {
-                path.Add(cell);
-                current = cell;
+            while (dict.TryGetValue(current, out (float _, MapGridCell Cell) cur) && cur.Cell != current) {
+                path.Add(cur.Cell);
+                current = cur.Cell;
             }
 
             path.Reverse();
-            return new(dist[goal], path);
+            return new(dict[goal].RunningCost, path);
         }
 
         return new(float.MaxValue, []);
