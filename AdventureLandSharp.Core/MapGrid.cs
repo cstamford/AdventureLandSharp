@@ -120,22 +120,17 @@ public class MapGrid {
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGridPath IntraMap_AStar(MapGridCell start, MapGridCell goal, MapGridPathSettings settings) {
         Debug.Assert(IsWalkable(start) && IsWalkable(goal), "IntraMap_AStar requires start and goal to be walkable.");
+        Debug.Assert(start != goal, "IntraMap_AStar requires start and goal to be different.");
 
-        if (start == goal) {
-            return new(0, []);
-        }
+        PriorityQueue<MapGridCell, float> Q = new();
+        Dictionary<MapGridCell, float> dist = [];
+        Dictionary<MapGridCell, MapGridCell> prev = [];
 
-        PriorityQueue<MapGridCell, float> queue = new();
-        HashSet<MapGridCell> closed = [];
+        dist[start] = 0;
+        Q.Enqueue(start, 0);
 
-        Dictionary<MapGridCell, MapGridCell> backtrack = [];
-        Dictionary<MapGridCell, float> runningCosts = new() { [start] = 0 };
-
-        queue.Enqueue(start, 0);
-
-        for (int steps = 0; queue.TryDequeue(out MapGridCell pos, out float _) && pos != goal; ++steps) {
-            float runningCost = runningCosts[pos];
-            closed.Add(pos);
+        for (int steps = 0; Q.TryDequeue(out MapGridCell pos, out float _) && pos != goal; ++steps) {
+            float runningCost = dist[pos];
 
             if (settings.MaxSteps.HasValue && steps > settings.MaxSteps) {
                 break;
@@ -148,7 +143,7 @@ public class MapGrid {
             foreach (MapGridCell offset in _neighbourOffsets) {
                 MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
 
-                if (!IsWalkable(neighbour) || closed.Contains(neighbour)) {
+                if (!IsWalkable(neighbour)) {
                     continue;
                 }
 
@@ -156,30 +151,28 @@ public class MapGrid {
                 float neighbourRunningCost = runningCost + costToNeighbour;
                 float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, settings.Heuristic);
 
-                if (!runningCosts.TryGetValue(neighbour, out float currentRunningCost) || neighbourRunningCost < currentRunningCost) {
-                    runningCosts[neighbour] = neighbourRunningCost;
-                    backtrack[neighbour] = pos;
-                    queue.Enqueue(neighbour, (float)neighbourTotalCost);
+                if (!dist.TryGetValue(neighbour, out float currentRunningCost) || neighbourRunningCost < currentRunningCost) {
+                    prev[neighbour] = pos;
+                    dist[neighbour] = neighbourRunningCost;
+                    Q.Enqueue(neighbour, neighbourTotalCost);
                 }
             }
         }
 
-        List<MapGridCell> backtrackPath = [];
-        MapGridCell backtrackPos = goal;
+        if (dist.TryGetValue(goal, out float _)) {
+            List<MapGridCell> path = [];
+            MapGridCell current = goal;
 
-        while (backtrack.TryGetValue(backtrackPos, out MapGridCell backtrackPrevPos)) {
-            backtrackPath.Add(backtrackPos);
-            backtrackPos = backtrackPrevPos;
+            while (prev.TryGetValue(current, out MapGridCell cell)) {
+                path.Add(cell);
+                current = cell;
+            }
+
+            path.Reverse();
+            return new(dist[goal], path);
         }
 
-        if (backtrackPos != start) {
-            return new(float.MaxValue, []);
-        }
-
-        backtrackPath.Add(start);
-        backtrackPath.Reverse();
-
-        return new(runningCosts[goal], backtrackPath);
+        return new(float.MaxValue, []);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
