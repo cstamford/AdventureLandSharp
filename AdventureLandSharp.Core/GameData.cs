@@ -93,13 +93,25 @@ public readonly record struct GameDataMapMonster(
     [property: JsonPropertyName("radius")] double? Radius,
     [property: JsonPropertyName("count")] double Count
 ) {
-    public Vector2 GetSpawnPosition() {
+    public (string? MapName, Vector2 Location)[] GetSpawnLocations() {
+        if (Boundaries != null) {
+            return Boundaries.Select(x => {
+                string? map = x[0].GetString();
+                double minX = x[1].GetDouble();
+                double minY = x[2].GetDouble();
+                double maxX = x[3].GetDouble();
+                double maxY = x[4].GetDouble();
+                Vector2 center = new((float)((minX + maxX) / 2), (float)((minY + maxY) / 2));
+                return (map, center);
+            }).ToArray();
+        }
+
         if (Boundary is { Length: 4 }) {
-            return new((float)(Boundary[0] + Boundary[2]) / 2, (float)(Boundary[1] + Boundary[3]) / 2);
+            return [ (null, new((float)(Boundary[0] + Boundary[2]) / 2, (float)(Boundary[1] + Boundary[3]) / 2)) ];
         }
 
         if (Position is { Length: 2 }) {
-            return new((float)Position[0], (float)Position[1]);
+            return [ (null, new((float)Position[0], (float)Position[1])) ];
         }
 
         throw new("No spawn position available.");

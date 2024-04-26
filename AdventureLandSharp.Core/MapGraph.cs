@@ -35,8 +35,17 @@ public class MapGraph {
 
     public MapGraph(IReadOnlyDictionary<string, Map> maps) {
         foreach (Map map in maps.Values) {
-            // Creating a vertex for the teleport destination of each map.
-            AddVertex(map.DefaultSpawn);
+            // Creating a vertex for every spawn location on the map, including teleport.
+            foreach (double[] spawn in map.Data.SpawnPositions) {
+                AddVertex(new(map, new((float)spawn[0], (float)spawn[1])));
+            }
+
+            // Creating a vertex for every monster spawn location on the map, as they are common destinations.
+            foreach (GameDataMapMonster monster in map.Data.Monsters ?? []) {
+                foreach ((string? spawnMapName, Vector2 spawnLoc) in monster.GetSpawnLocations()) {
+                    AddVertex(new(spawnMapName == null ? map : maps[spawnMapName], spawnLoc));
+                }
+            }
 
             // Adding vertices for each connection point and creating edges between them.
             foreach (MapConnection connection in map.Connections) {
@@ -94,8 +103,12 @@ public class MapGraph {
 
         // Generate a path from start to rampOn, and from rampOff to goal.
         // Note that they will be null if these vertices are the same as the start or goal (e.g. already in graph).
-        MapGraphEdgeIntraMap? startToRampOn = start.Map.FindPath(start.Location, rampOn.Location, settings);
-        MapGraphEdgeIntraMap? rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
+        MapGraphEdgeIntraMap? startToRampOn = start != rampOn ? start.Map.FindPath(start.Location, rampOn.Location, settings) : null;
+        MapGraphEdgeIntraMap? rampOffToGoal = goal != rampOff ? goal.Map.FindPath(rampOff.Location, goal.Location, settings) : null;
+
+        // In the event that this is a direct path (same map), try generating a path directly.
+        // This will prevent us from bouncing between vertices. Note that we still want to run Dijkstra's to look for cool shortcuts.
+        MapGraphEdgeIntraMap? directPath = start.Map == goal.Map ? start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 100 }) : null;
 
         dist[start] = 0;
         Q.Enqueue(start, 0);
@@ -108,6 +121,10 @@ public class MapGraph {
                 isStart ? startToRampOn!.Value : rampOffToGoal!.Value,
                 new MapGraphEdgeTeleport(u, u.Map.DefaultSpawn)
             ] : _edges[u];
+
+            if (isStart && directPath.HasValue) {
+                edges = edges.Concat([directPath.Value]);
+            }
 
             foreach (IMapGraphEdge edge in edges) {
                 MapLocation vLoc = edge.Dest;
