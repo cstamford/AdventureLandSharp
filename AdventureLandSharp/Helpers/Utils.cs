@@ -13,7 +13,7 @@ public static class Utils {
         false;
 #endif
 
-    public const bool TargetLocalServer = InDebugMode ? true : true;
+    public const bool TargetLocalServer = InDebugMode ? true : false;
 
     public static ApiAddress ApiAddress => new(TargetLocalServer ? "http://localhost:8083" : "http://adventure.land");
 
