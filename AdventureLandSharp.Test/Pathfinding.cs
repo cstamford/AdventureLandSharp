@@ -90,4 +90,28 @@ public class Pathfinding {
 
         Assert.IsTrue(!path.Any());
     }
+
+    [TestMethod]
+    public void FindRoute_OffGrid() {
+        Map main = InitWorld.World.GetMap("main");
+        Map desertland = InitWorld.World.GetMap("desertland");
+        MapLocation start = new(desertland, new(-1184, 781));
+        MapLocation end = new(main, new(0, 0));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
+
+    [TestMethod]
+    public void FindRoute_OffGrid2() {
+        Map main = InitWorld.World.GetMap("main");
+        Map desertland = InitWorld.World.GetMap("desertland");
+        MapLocation start = new(desertland, new(-669, 315));
+        MapLocation end = new(main, new(-1184, 781));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
 }

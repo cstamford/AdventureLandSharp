@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Numerics;
 
 namespace AdventureLandSharp.Core;
@@ -73,16 +74,10 @@ public class MapGraph {
 
             // Creating an edge between each pair of vertices.
             Parallel.ForEach(vertices, u => {
-                Parallel.ForEach(vertices, v => {
-                    if (v == map.DefaultSpawn) {
-                        // Teleport edge where the destination is the default spawn of the map.
-                        edges.Add(new MapGraphEdgeTeleport(u, v));
-                    } else if (u != v) {
-                        // Intra-map edge.
-                        MapGraphEdgeIntraMap? edge = map.FindPath(u.Location, v.Location);
-                        if (edge?.Cost > 0) {
-                            edges.Add(edge!);
-                        }
+                Parallel.ForEach(vertices.Where(v => v != u && v != v.Map.DefaultSpawn), v => {
+                    MapGraphEdgeIntraMap? edge = map.FindPath(u.Location, v.Location);
+                    if (edge?.Cost > 0) {
+                        edges.Add(edge!);
                     }
                 });
             });
@@ -116,25 +111,30 @@ public class MapGraph {
 
         // In the event that this is a direct path (same map), try generating a path directly.
         // This will prevent us from bouncing between vertices. Note that we still want to run Dijkstra's to look for cool shortcuts.
-        MapGraphEdgeIntraMap? directPath = start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 100 });
+        MapGraphEdgeIntraMap? directPath = start.Map == goal.Map ?
+            start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 100 }) :
+            null;
 
         dist[start] = 0;
         Q.Enqueue(start, 0);
 
         while (Q.TryDequeue(out MapLocation u, out float _) && u != goal) {
-            bool isStart = u == start && startToRampOn.HasValue;
-            bool isRampOff = u == rampOff && rampOffToGoal.HasValue;
+            IEnumerable<IMapGraphEdge?> specialEdges = [
+                u == start ? startToRampOn : null,
+                u == start ? directPath : null,
+                u == rampOff ? rampOffToGoal : null,
+                new MapGraphEdgeTeleport(u, u.Map.DefaultSpawn) // note: we can always teleport back to the default spawn
+            ];
 
-            IEnumerable<IMapGraphEdge> edges = (isStart || isRampOff) ? [
-                isStart ? startToRampOn!.Value : rampOffToGoal!.Value,
-                new MapGraphEdgeTeleport(u, u.Map.DefaultSpawn)
-            ] : _edges[u];
-
-            if (isStart && directPath.HasValue) {
-                edges = edges.Concat([directPath.Value]);
+            foreach (IMapGraphEdge? edge in specialEdges.Where(x => x != null)) {
+                VisitEdge(edge!);
             }
 
-            foreach (IMapGraphEdge edge in edges) {
+            foreach (IMapGraphEdge edge in _edges.TryGetValue(u, out HashSet<IMapGraphEdge>? edges) ? edges : []) {
+                VisitEdge(edge);
+            }
+
+            void VisitEdge(IMapGraphEdge edge) {
                 MapLocation vLoc = edge.Dest;
 
                 float alt = 1 + dist[u] + (edge switch {
