@@ -7,23 +7,21 @@ namespace AdventureLandSharp;
 public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
     public MapLocation Start => _start;
     public MapLocation End => _end;
-    public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
+    public bool Finished => (_edge == null || CurrentEdgeFinished || CurrentEdgeInvalid) && _edges.Count == 0;
     public IMapGraphEdge? CurrentEdge => _edge;
 
     public void Update() {
-        if (Finished) {
-            return;
-        }
-
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
-        if (CurrentEdgeFinished) {
-            _edge = null;
+        while (!Finished && (CurrentEdgeFinished || CurrentEdgeInvalid)) {
+            _edge = _edges.TryDequeue(out IMapGraphEdge? edge) ? edge : null;
             _edgeUpdate = now;
             Player.MovementPlan = null;
         }
 
-        _edge ??= _edges.Dequeue();
+        if (Finished) {
+            return;
+        }
 
         if (now >= _edgeUpdate) {
             ProcessEdge();
@@ -46,6 +44,8 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
             Player.Position.Equivalent(teleport.Dest.Location, teleport.Dest.Map.DefaultSpawnScatter + MapGrid.CellWorldEpsilon),
         _ => true 
     };
+
+    private bool CurrentEdgeInvalid => _edge?.Source.Map.Name != Player.MapName;
 
     private IMapGraphEdge? _edge;
     private DateTimeOffset _edgeUpdate;
