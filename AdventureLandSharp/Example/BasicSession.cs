@@ -59,12 +59,12 @@ public class BasicSession(
 
     private void OnRecv(string evt, object data) {
         string dataStr = data.ToString()!;
-        _log.Debug($"RECV <-- Event: {evt}, Data: {dataStr[..Math.Min(64, dataStr.Length)]}");
+        _log.Debug($"RECV <--- {evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
     }
 
     private void OnSend(string evt, object data) {
         string dataStr = data.ToString()!;
-        _log.Debug($"SEND --> Event: {evt}, Data: {dataStr[..Math.Min(64, dataStr.Length)]}");
+        _log.Debug($"SEND ---> {evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
     }
 
     private void DoOneRun() {
