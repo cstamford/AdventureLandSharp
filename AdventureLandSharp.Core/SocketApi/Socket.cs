@@ -26,11 +26,12 @@ public class Socket : IDisposable {
         Action<string, object>? fnOnEmit = null,
         Action<string, object>? fnOnRecv = null)
     {
+        _log = new(settings.Character.Name, "SOCKET");
         _gameData = gameData;
         _connection = new(settings);
 
         _connection.OnConnected += (x) => {
-            Log.Info($"[{settings.Character.Name} CONN] Connected to server.");
+            _log.Info($"Connected to server.");
 
             MethodInfo? recvPlayer = typeof(Socket).GetMethod(
                 nameof(Recv_Player),
@@ -47,7 +48,7 @@ public class Socket : IDisposable {
         };
 
         _connection.OnDisconnected += () => {
-            Log.Info($"[{settings.Character.Name} CONN] Disconnected from server.");
+            _log.Info($"Disconnected from server.");
         };
 
         OnEmit += fnOnEmit;
@@ -64,8 +65,6 @@ public class Socket : IDisposable {
             .Where(x => x.method != null)
             .Select(x => (x.type, x.method!, x.name))
         ) {
-            Log.Info($"[{settings.Character.Name} CONN] Registered message {name} to handler {method.Name}.");
-
             MethodInfo? socketGetValueMethod = typeof(SocketIOClient.SocketIOResponse).GetMethod(
                 nameof(SocketIOClient.SocketIOResponse.GetValue),
                 BindingFlags.Instance | BindingFlags.Public
@@ -82,7 +81,7 @@ public class Socket : IDisposable {
                         Debug.Assert(data != null, "Could not get data from SocketIOResponse.");
                         _recvQueue.Enqueue((name, method, data));
                     } catch (Exception ex) {
-                        Log.Error($"(system) Error processing message {name}: {ex}");
+                        _log.Error($"(system) Error processing message {name}: {ex}");
                     }
                 });
             };
@@ -100,7 +99,7 @@ public class Socket : IDisposable {
         try {
             OnEmit?.Invoke(name, evt);
         } catch (Exception ex) {
-            Log.Error($"(user) Error emitting message {name}: {ex}");
+            _log.Error($"(user) Error emitting message {name}: {ex}");
         }
 
         return _connection.SocketIo!.EmitAsync(name, evt);
@@ -124,6 +123,7 @@ public class Socket : IDisposable {
 
     private readonly GameData _gameData;
     private readonly Connection _connection;
+    private readonly Logger _log;
 
     private readonly ConcurrentQueue<(string, MethodInfo, object)> _recvQueue = [];
     private DateTimeOffset _lastNetMove = DateTimeOffset.UtcNow;
@@ -194,7 +194,7 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.LimitDcReportData evt) {
-        Log.Info($"Limit DC Report: {evt}");
+        _log.Info($"Limit DC Report: {evt}");
     }
 
     private void Recv(Inbound.NewMapData evt) {
@@ -219,13 +219,13 @@ public class Socket : IDisposable {
             try {
                 OnRecv?.Invoke(queued.evt, queued.data);
             } catch (Exception ex) {
-                Log.Error($"(user) Error processing message {queued.evt}: {ex}");
+                _log.Error($"(user) Error processing message {queued.evt}: {ex}");
             }
 
             try {
                 queued.method.Invoke(this, [queued.data]);
             } catch (Exception ex) {
-                Log.Error($"(system) Error processing message {queued.evt}: {ex}");
+                _log.Error($"(system) Error processing message {queued.evt}: {ex}");
             }
         }
     }

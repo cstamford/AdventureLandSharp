@@ -46,6 +46,8 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         CloseExistingConnection();
     }
 
+    private readonly Logger _log = new(settings.Character.Name, "CONNECTION");
+
     private SocketIOClient.SocketIO? _socketIo;
     private DateTimeOffset _authTimeout = DateTimeOffset.UtcNow;
     private DateTimeOffset _reconnectTimeout = DateTimeOffset.UtcNow;
@@ -58,7 +60,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         _socketIo = new($"http://{settings.Server.Addr}:{settings.Server.Port}");
 
         SafeSocketOn("welcome", async _ => {
-            Log.Info($"[{settings.Character.Name} CONN] Welcome message received. Responding with loaded message.");
+            _log.Info($"Welcome message received. Responding with loaded message.");
             await _socketIo.EmitAsync("loaded", new Outbound.Loaded(
                 Success: true,
                 Width: 1920,
@@ -68,7 +70,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
 
         SafeSocketOn("entities", async e => {
             if (!_authenticated) {
-                Log.Info($"[{settings.Character.Name} CONN] Initial entities message received. Responding with auth message.");
+                _log.Info($"Initial entities message received. Responding with auth message.");
 
                 await _socketIo.EmitAsync("auth", new Outbound.Auth(
                     AuthToken: settings.AuthToken,
@@ -86,7 +88,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         });
 
         SafeSocketOn("start", e => {
-            Log.Info($"[{settings.Character.Name} CONN] Start message received.");
+            _log.Info($"Start message received.");
             OnConnected?.Invoke(e.GetValue<JsonElement>());
             _ready = true;
         });
@@ -100,7 +102,12 @@ public class Connection(ConnectionSettings settings) : IDisposable {
     }
 
     private void HandleError(string type, object e) {
-        Log.Error($"{type}: {e}");
+        _log.Error($"{type}: {e}");
+        CloseExistingConnection();
+    }
+
+    private void HandleError(string type, object e, Exception ex) {
+        _log.Error($"{type}: {e} with exception: {ex}");
         CloseExistingConnection();
     }
 
@@ -110,8 +117,8 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         _socketIo.On(name, e => {
             try {
                 cb(e);
-            } catch {
-                HandleError(name, e);
+            } catch(Exception ex) {
+                HandleError(name, e, ex);
             }
         });
     }
@@ -127,7 +134,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
             Thread.Sleep(TimeSpan.FromSeconds(1));
             _socketIo?.Dispose();
         } catch (Exception e) {
-            Log.Error($"Error disposing _socketIo: {e}");
+            _log.Error($"Error disposing _socketIo: {e}");
         } finally {
             _socketIo = null;
         }

@@ -35,7 +35,7 @@ public class BasicSession(
             try {   
                 DoOneRun();
             } catch (Exception ex) {
-                Log.Error($"[{_settings.Character.Name}] Exception: {ex}");
+                _log.Error($"DoOneRun update exception: {ex}");
             } finally {
                 CleanUpAfterRun();
             }
@@ -52,16 +52,19 @@ public class BasicSession(
 
     private readonly World _world = world;
     private readonly ConnectionSettings _settings = settings;
+    private readonly Logger _log = new(settings.Character.Name, "SESSION");
     private Socket? _socket;
     private BasicSessionGui? _gui;
     private bool _disposed = false;
 
     private void OnRecv(string evt, object data) {
-        Log.Debug($"[{_settings.Character.Name} RECV] Event: {evt}, Data: {data}");
+        string dataStr = data.ToString()!;
+        _log.Debug($"RECV <-- Event: {evt}, Data: {dataStr[..Math.Min(64, dataStr.Length)]}");
     }
 
     private void OnSend(string evt, object data) {
-        Log.Debug($"[{_settings.Character.Name} SEND] Event: {evt}, Data: {data}");
+        string dataStr = data.ToString()!;
+        _log.Debug($"SEND --> Event: {evt}, Data: {dataStr[..Math.Min(64, dataStr.Length)]}");
     }
 
     private void DoOneRun() {
