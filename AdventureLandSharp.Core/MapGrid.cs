@@ -121,12 +121,13 @@ public class MapGrid {
         Debug.Assert(IsWalkable(start) && IsWalkable(goal), "IntraMap_AStar requires start and goal to be walkable.");
         Debug.Assert(start != goal, "IntraMap_AStar requires start and goal to be different.");
 
-        PriorityQueue<MapGridCell, float> Q = new();
         DenseMap<MapGridCell, (float RunningCost, MapGridCell Cell)> dict = _dictPool.Value!;
+        FastPriorityQueue<MapGridCell> Q = _queuePool.Value!;
 
         dict.Clear();
         dict.Emplace(start, (0, start));
 
+        Q.Clear();
         Q.Enqueue(start, 0);
 
         for (int steps = 0; Q.TryDequeue(out MapGridCell pos, out float _) && pos != goal; ++steps) {
@@ -262,7 +263,8 @@ public class MapGrid {
         new(-1,  0), new(1, 0), new(0, -1), new(0,  1)
     ];
 
-    private static ThreadLocal<DenseMap<MapGridCell, (float RunningCost, MapGridCell Cell)>> _dictPool = new(() => new());
+    private static readonly ThreadLocal<DenseMap<MapGridCell, (float RunningCost, MapGridCell Cell)>> _dictPool = new(() => new());
+    private static readonly ThreadLocal<FastPriorityQueue<MapGridCell>> _queuePool = new(() => new());
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static MapGridCell WorldToGrid(GameLevelGeometry geo, double x, double y) 
