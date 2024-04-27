@@ -53,8 +53,10 @@ public static class Log {
 
     private static void Write(ConsoleColor col, string message) {
         _logLock.Wait();
+        ConsoleColor lastCol = Console.ForegroundColor;
         Console.ForegroundColor = col;
         Console.WriteLine(message);
+        Console.ForegroundColor = lastCol;
         _logWriter.WriteLine(message);
         _logLock.Release();
     }

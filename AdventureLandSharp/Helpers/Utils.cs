@@ -13,7 +13,9 @@ public static class Utils {
         false;
 #endif
 
-    public static ApiAddress ApiAddress => new(InDebugMode ? "http://localhost:8083" : "http://adventure.land");
+    public const bool TargetLocalServer = InDebugMode ? true : true;
+
+    public static ApiAddress ApiAddress => new(TargetLocalServer ? "http://localhost:8083" : "http://adventure.land");
 
     public static MapLocation GetMapLocationForSpawn(World world, string mapName, string mobName) {
         (string? map, Vector2 loc) = world.Data.Maps[mapName].Monsters!

@@ -6,7 +6,7 @@ namespace AdventureLandSharp;
 
 public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, MapLocation end) {
     public MapLocation End => end;
-    public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
+    public bool Finished => _edges.Count == 0 && (!CurrentEdgeValid || CurrentEdgeFinished);
     public IMapGraphEdge? CurrentEdge => _edge;
 
     public void Update() {
