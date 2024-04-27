@@ -27,7 +27,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
     public GameDataMap Data => mapData;
     public GameLevelGeometry Geometry => mapGeometry;
     public MapLocation DefaultSpawn => new(this, new((float)mapData.SpawnPositions[0][0], (float)mapData.SpawnPositions[0][1]));
-    public float DefaultSpawnScatter => mapData.SpawnPositions[0].Length >= 3 ? (float)mapData.SpawnPositions[0][3] : 0;
+    public float DefaultSpawnScatter => mapData.SpawnPositions[0].Length >= 4 ? (float)mapData.SpawnPositions[0][3] : 0;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGraphEdgeIntraMap? FindPath(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) {

@@ -22,4 +22,7 @@ public static class Utils {
                 .First();
         Debug.Assert(map == null || map == mapName);
         return new MapLocation(world.GetMap(mapName), loc);
-    }}
+    }
+
+    public static TimeSpan SafeAbilityCd(TimeSpan time) => time.Add(TimeSpan.FromMilliseconds(100));
+}

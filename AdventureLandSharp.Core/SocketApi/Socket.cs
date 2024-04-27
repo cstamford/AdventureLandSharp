@@ -16,9 +16,11 @@ public class Socket : IDisposable {
     public LocalPlayer Player => _player;
     public IEnumerable<Entity> Entities => _entities.Values;
     public IEnumerable<DropData> Drops => _drops.Values;
-    public IEnumerable<Entity> Party => _party
+    public IEnumerable<string> Party => _party;
+    public IEnumerable<Player> PartyInRange => _party
         .Where(_entities.ContainsKey)
-        .Select(x => _entities[x]);
+        .Select(x => _entities[x])
+        .Cast<Player>();
 
     public Socket(
         GameData gameData,

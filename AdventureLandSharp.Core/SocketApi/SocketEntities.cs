@@ -35,6 +35,7 @@ public abstract class Entity {
     public EntityStats Stats { get; protected set; } 
     public StatusEffects StatusEffects { get; protected set; }
     public ISocketEntityMovementPlan? MovementPlan { get; set; }
+    public string Target { get; protected set; } = string.Empty;
 
     public Entity(JsonElement source) {
         Id = source.GetString("id");
@@ -45,6 +46,7 @@ public abstract class Entity {
         Vitals = source.Deserialize<EntityVitals>();
         Stats = source.Deserialize<EntityStats>();
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
+        Target = source.GetString("target", string.Empty);
         _name = Id;
     }
 
@@ -57,6 +59,7 @@ public abstract class Entity {
         Vitals = new EntityVitals(monsterDef).Update(source);
         Stats = new EntityStats(monsterDef).Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
+        Target = source.GetString("target", string.Empty);
         _name = monsterDef.Name;
     }
 
@@ -67,6 +70,7 @@ public abstract class Entity {
         Vitals = Vitals.Update(source);
         Stats = Stats.Update(source);
         StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
+        Target = source.GetString("target", Target);
     }
 
     public virtual void Tick(float dt) {

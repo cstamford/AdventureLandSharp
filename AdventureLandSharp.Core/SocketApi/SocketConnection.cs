@@ -93,7 +93,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
             _ready = true;
         });
 
-        _socketIo.On("disconnect_reason", e => HandleError("disconnect_reason", e));
+        _socketIo.On("disconnect_reason", e => _log.Error($"disconnect_reason: {e}"));
         _socketIo.OnDisconnected += (_, e) => HandleError("_socketIo.OnDisconnected", e);
         _socketIo.OnError += (_, e) => HandleError("_socketIo.OnError", e);
 
