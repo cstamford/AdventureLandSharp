@@ -11,10 +11,12 @@ public abstract class Entity {
     public float Health => Vitals.Hp;
     public float MaxHealth => Vitals.MaxHp;
     public float HealthPercent => Health/MaxHealth * 100;
+    public float HealthMissing => MaxHealth - Health;
     
     public float Mana => Vitals.Mp;
     public float MaxMana => Vitals.MaxMp;
     public float ManaPercent => Mana/MaxMana * 100;
+    public float ManaMissing => MaxMana - Mana;
 
     public float Speed => Stats.Speed;
     public float AttackDamage => Stats.AttackDamage;
