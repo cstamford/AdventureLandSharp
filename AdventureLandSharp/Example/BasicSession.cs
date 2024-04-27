@@ -16,6 +16,7 @@ public class BasicSession(
 {
     public event Action<Socket, ICharacter>? OnInit;
     public event Action<Socket, ICharacter>? OnTick;
+    public event Action<Socket, ICharacter>? OnFree;
 
     public ConnectionSettings Settings => _settings;
 
@@ -70,7 +71,7 @@ public class BasicSession(
     private void DoOneRun() {
         Debug.Assert(_socket != null && _socket.Connected);
 
-        ICharacter character =  characterFactory(_world, _socket!, _settings.Character.Type switch {
+        ICharacter character = characterFactory(_world, _socket!, _settings.Character.Type switch {
             "mage" => CharacterClass.Mage,
             "merchant" => CharacterClass.Merchant,
             "paladin" => CharacterClass.Paladin,
@@ -97,6 +98,8 @@ public class BasicSession(
             OnTick?.Invoke(_socket, character);
             Thread.Yield();
         }
+
+        OnFree?.Invoke(_socket, character);
     }
 
     private void CleanUpAfterRun() {
