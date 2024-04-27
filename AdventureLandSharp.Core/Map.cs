@@ -51,7 +51,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
             return null;
         }
 
-        MapGraphEdgeIntraMap edge = new(startMapLoc, goalMapLoc, [..path.Points.Select(Grid.GridToWorld)], path.Cost);
+        MapGraphEdgeIntraMap edge = new(startMapLoc, goalMapLoc, MergedWorldPath(path.Points), path.Cost);
         _pathCache.TryAdd(pathCacheKey, edge);
     
         return CopyEdgeWithRamp(edge, start, goal);
@@ -79,6 +79,32 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         }
 
         return copy;
+    }
+
+    private List<Vector2> MergedWorldPath(List<MapGridCell> fullPath) {
+        if (fullPath.Count <= 1) {
+            return [..fullPath.Select(Grid.GridToWorld)];
+        }
+
+        List<Vector2> simplifiedPath = [fullPath[0].World(this)];
+
+        for (int i = 0; i < fullPath.Count - 1; i++) {
+            MapGridCell cur = fullPath[i];
+            MapGridCell next = fullPath[i + 1];
+
+            if (i < fullPath.Count - 2) {
+                MapGridCell afterNext = fullPath[i + 2];
+                if (Math.Abs(cur.X - afterNext.X) == 1 && Math.Abs(cur.Y - afterNext.Y) == 1) {
+                    simplifiedPath.Add(afterNext.World(this));
+                    i++; // Skip the next since it's folded into the diagonal
+                    continue;
+                }
+            }
+
+            simplifiedPath.Add(next.World(this));
+        }
+
+        return simplifiedPath;
     }
 }
 

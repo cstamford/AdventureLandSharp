@@ -1,3 +1,4 @@
+using Faster.Map.DenseMap;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Index.Strtree;
@@ -64,7 +65,7 @@ public readonly record struct MapGridPathSettings(
     int? MaxSteps = null,
     float? MaxCost = null)
 {
-    public MapGridPathSettings() : this(MapGridHeuristic.Diagonal, null, null) 
+    public MapGridPathSettings() : this(MapGridHeuristic.Manhattan, null, null) 
     { }
 }
 
@@ -121,9 +122,11 @@ public class MapGrid {
         Debug.Assert(start != goal, "IntraMap_AStar requires start and goal to be different.");
 
         PriorityQueue<MapGridCell, float> Q = new();
-        Dictionary<MapGridCell, (float RunningCost, MapGridCell Cell)> dict = [];
+        DenseMap<MapGridCell, (float RunningCost, MapGridCell Cell)> dict = _dictPool.Value!;
 
-        dict[start] = (0, start);
+        dict.Clear();
+        dict.Emplace(start, (0, start));
+
         Q.Enqueue(start, 0);
 
         for (int steps = 0; Q.TryDequeue(out MapGridCell pos, out float _) && pos != goal; ++steps) {
@@ -146,20 +149,26 @@ public class MapGrid {
 
                 float costToNeighbour = pos.Cost(neighbour, settings.Heuristic) * Cost(neighbour);
                 float neighbourRunningCost = runningCost + costToNeighbour;
-                float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, settings.Heuristic);
+                bool exists = dict.Get(neighbour, out (float RunningCost, MapGridCell Cell) cur);
 
-                if (!dict.TryGetValue(neighbour, out (float RunningCost, MapGridCell Cell) cur) || neighbourRunningCost < cur.RunningCost) {
-                    dict[neighbour] = (neighbourRunningCost, pos);
-                    Q.Enqueue(neighbour, neighbourTotalCost);
+                if (!exists) {
+                    dict.Emplace(neighbour, (neighbourRunningCost, pos));
+                } else if (neighbourRunningCost < cur.RunningCost) {
+                    dict.Update(neighbour, (neighbourRunningCost, pos));
+                } else {
+                    continue;
                 }
+
+                float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, settings.Heuristic);
+                Q.Enqueue(neighbour, neighbourTotalCost);
             }
         }
 
-        if (dict.TryGetValue(goal, out _)) {
+        if (dict.Get(goal, out _)) {
             List<MapGridCell> path = [];
             MapGridCell current = goal;
 
-            while (dict.TryGetValue(current, out (float _, MapGridCell Cell) cur) && cur.Cell != current) {
+            while (dict.Get(current, out (float _, MapGridCell Cell) cur) && cur.Cell != current) {
                 path.Add(cur.Cell);
                 current = cur.Cell;
             }
@@ -250,9 +259,10 @@ public class MapGrid {
     private readonly int _height;
     private readonly GameLevelGeometry _mapGeometry;
     private static readonly MapGridCell[] _neighbourOffsets = [ 
-        new(-1,  0), new(1, 0), new(0, -1), new(0,  1),
-        new(-1, -1), new(1, 1), new(-1, 1), new(1, -1)
+        new(-1,  0), new(1, 0), new(0, -1), new(0,  1)
     ];
+
+    private static ThreadLocal<DenseMap<MapGridCell, (float RunningCost, MapGridCell Cell)>> _dictPool = new(() => new());
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static MapGridCell WorldToGrid(GameLevelGeometry geo, double x, double y) 
