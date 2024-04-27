@@ -26,9 +26,20 @@ public class World {
     public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGridPathSettings? settings = null) {
         settings ??= new();
         List<IMapGraphEdge> edges = _mapsGraph.InterMap_Djikstra(start, goal, settings.Value);
+        MergeAdjacentIntraMapEdgesInPlace(edges, settings.Value);
+        return edges;
+    }
 
-        // Attempt to merge any adjacent intra-map edges in the same map via a direct path.
-        // This can increase the accuracy (avoiding useless ramp on/off), but we limit by cost to ensure we don't have a large perf hit.
+    public Map GetMap(string mapName) => _maps[mapName];
+    public bool TryGetMap(string mapName, out Map map) => _maps.TryGetValue(mapName, out map!);
+
+    private readonly GameData _data;
+    private readonly Dictionary<string, Map> _maps;
+    private readonly MapGraph _mapsGraph;
+
+    // Attempt to merge any adjacent intra-map edges in the same map via a direct path.
+    // This can increase the accuracy (avoiding useless ramp on/off), but we limit by cost to ensure we don't have a large perf hit.
+    private static void MergeAdjacentIntraMapEdgesInPlace(List<IMapGraphEdge> edges, MapGridPathSettings settings) {
         for (int i = 0; i < edges.Count; ++i) {
             if (edges[i] is not MapGraphEdgeIntraMap edge) {
                 continue;
@@ -51,7 +62,7 @@ public class World {
                 MapGraphEdgeIntraMap? mergedEdge = mergeStart.Map.FindPath(
                     mergeStart.Location,
                     mergeGoal.Location,
-                    settings!.Value with { MaxCost = 100 });
+                    settings with { MaxCost = 100 });
 
                 if (mergedEdge != null) {
                     edges[i] = mergedEdge;
@@ -59,14 +70,5 @@ public class World {
                 }
             }
         }
-
-        return edges;
     }
-
-    public Map GetMap(string mapName) => _maps[mapName];
-    public bool TryGetMap(string mapName, out Map map) => _maps.TryGetValue(mapName, out map!);
-
-    private readonly GameData _data;
-    private readonly Dictionary<string, Map> _maps;
-    private readonly MapGraph _mapsGraph;
 }

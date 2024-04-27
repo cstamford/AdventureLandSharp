@@ -51,7 +51,9 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
             return null;
         }
 
-        MapGraphEdgeIntraMap edge = new(startMapLoc, goalMapLoc, MergedWorldPath(path.Points), path.Cost);
+        List<Vector2> merged = MergedGridPathToWorld(path.Points);
+        List<Vector2> smoothed = SmoothedWorldPath(merged, divisions: 2);
+        MapGraphEdgeIntraMap edge = new(startMapLoc, goalMapLoc, smoothed, path.Cost);
         _pathCache.TryAdd(pathCacheKey, edge);
     
         return CopyEdgeWithRamp(edge, start, goal);
@@ -81,7 +83,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         return copy;
     }
 
-    private List<Vector2> MergedWorldPath(List<MapGridCell> fullPath) {
+    private List<Vector2> MergedGridPathToWorld(List<MapGridCell> fullPath) {
         if (fullPath.Count <= 1) {
             return [..fullPath.Select(Grid.GridToWorld)];
         }
@@ -106,11 +108,51 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
 
         return simplifiedPath;
     }
+
+    private static List<Vector2> SmoothedWorldPath(IReadOnlyList<Vector2> path, int divisions) {
+        if (path.Count < 2) {
+            return [.. path];
+        }
+
+        List<Vector2> smoothedPath = [
+            path[0],
+            ..Enumerable.Repeat(Vector2.Zero, path.Count * divisions)];
+
+        Parallel.For(0, path.Count, i => {
+            Vector2 p0 = i == 0 ? path[i] : path[i - 1];
+            Vector2 p1 = path[i];
+            Vector2 p2 = i >= path.Count - 1 ? p1 : path[i + 1];
+            Vector2 p3 = i >= path.Count - 2 ? p2 : path[i + 2];
+
+            for (int division = 0; division < divisions; ++division) {
+                float t = 1.0f / divisions * division;
+                int idx = divisions * i + division;
+                smoothedPath[1 + idx] = GetBSplinePoint(p0, p1, p2, p3, t);
+            }
+        });
+
+        return smoothedPath;
+    }
+
+    public static Vector2 GetCatmullRomPoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t) {
+        float t2 = t * t;
+        float t3 = t2 * t;
+        return 0.5f * ((2.0f * p1) + (-p0 + p2) * t + (2.0f * p0 - 5.0f * p1 + 4f * p2 - p3) * t2 + (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+    }
+
+    public static Vector2 GetBSplinePoint(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t) {
+        float it = 1.0f - t;
+        float b0 = it * it * it / 6.0f;
+        float b1 = (3 * t * t * t - 6 * t * t + 4) / 6.0f;
+        float b2 = (-3 * t * t * t + 3 * t * t + 3 * t + 1) / 6.0f;
+        float b3 = t * t * t / 6.0f;
+        return b0 * p0 + b1 * p1 + b2 * p2 + b3 * p3;
+    }
 }
 
 public static class Vector2Extensions {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Equivalent(this Vector2 a, Vector2 b) => a.Equivalent(b, MapGrid.CellWorldEpsilon);
+    public static bool Equivalent(this Vector2 a, Vector2 b) => a.Equivalent(b, MapGrid.CellWorldEpsilon/2);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Equivalent(this Vector2 a, Vector2 b, float epsilon) => Vector2.Distance(a, b) <= epsilon;

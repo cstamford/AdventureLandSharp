@@ -86,8 +86,8 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private MapGraphEdgeIntraMap ProcessEdge_MapTransitionDistanceSkip(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
             float cuttableDistance = nextEdgeInter.Type switch {
-                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon*3,
-                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon*3,
+                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon*2,
+                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon*2,
                 _ => 0.0f
             };
 
