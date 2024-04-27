@@ -125,7 +125,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
             Vector2 p3 = i >= path.Count - 2 ? p2 : path[i + 2];
 
             for (int division = 0; division < divisions; ++division) {
-                float t = 1.0f / divisions * division;
+                float t = 1.0f / (divisions - 1) * (divisions - 1);
                 int idx = divisions * i + division;
                 smoothedPath[1 + idx] = GetBSplinePoint(p0, p1, p2, p3, t);
             }
