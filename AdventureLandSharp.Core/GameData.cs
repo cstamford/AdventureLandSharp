@@ -121,9 +121,9 @@ public readonly record struct GameDataMapMonster(
 public readonly record struct GameDataMapNpc(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("position")] double[] Position
+    [property: JsonPropertyName("position")] double[]? Position
 ) {
-    public Vector2 GetPosition() => new((float)Position[0], (float)Position[1]);
+    public Vector2? GetPosition() => Position != null ? new((float)Position[0], (float)Position[1]) : null;
 }
 
 public readonly record struct GameData(

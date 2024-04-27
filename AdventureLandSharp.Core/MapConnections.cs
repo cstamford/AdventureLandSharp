@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace AdventureLandSharp.Core;
@@ -48,11 +49,12 @@ public class MapConnections(string mapName, GameData gameData, GameDataMap mapDa
         GameDataNpc transporterNpc = gameData.Npcs["transporter"];
         foreach (GameDataMapNpc npc in mapData.Npcs.Where(npc => npc.Id == "transporter")) {
             foreach ((string? destMap, long destSpawnId) in transporterNpc.Places!) {
+                Debug.Assert(npc.Position != null);
                 double[] destinationPosition = gameData.Maps[destMap].SpawnPositions[destSpawnId];
                 connections.Add(new(
                     MapConnectionType.Transporter,
                     mapName, (float)npc.Position[0], (float)npc.Position[1],
-                    destMap, (float)destinationPosition[0],(float)destinationPosition[1], destSpawnId
+                    destMap, (float)destinationPosition[0], (float)destinationPosition[1], destSpawnId
                 ));
             }
         }

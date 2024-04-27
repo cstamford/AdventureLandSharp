@@ -38,7 +38,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         MapLocation goalMapLoc = new(this, goal);
 
         if (startWalkable == goalWalkable) {
-            return new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [start, goal], 0);
+            return start != goal ? new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [start, goal], 0) : null;
         }
 
         (Vector2, Vector2) pathCacheKey = (startWalkable, goalWalkable);

@@ -68,10 +68,26 @@ public class Pathfinding {
     public void FindRoute_CrabToStore() {
         Map main = InitWorld.World.GetMap("main");
         MapLocation start = Utils.GetMapLocationForSpawn(InitWorld.World, "main", "crab");
-        MapLocation end = new(main, InitWorld.World.Data.Maps["main"].Npcs!.First(x => x.Id == "fancypots").GetPosition());
+        MapLocation end = new(main, InitWorld.World.Data.Maps["main"].Npcs!.First(x => x.Id == "fancypots").GetPosition()!.Value);
         IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
 
         Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
         Assert.IsTrue(path.Any());
+    }
+
+    [TestMethod]
+    public void FindPath_SameSpot() {
+        Map main = InitWorld.World.GetMap("main");
+        IMapGraphEdge? path = main.FindPath(main.DefaultSpawn.Location, main.DefaultSpawn.Location);
+
+        Assert.IsTrue(path == null);
+    }
+
+    [TestMethod]
+    public void FindRoute_SameSpot() {
+        Map main = InitWorld.World.GetMap("main");
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(main.DefaultSpawn, main.DefaultSpawn);
+
+        Assert.IsTrue(!path.Any());
     }
 }

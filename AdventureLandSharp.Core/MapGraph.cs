@@ -49,7 +49,10 @@ public class MapGraph {
 
             // Creating a vertex for every NPC, for similar reason to monsters.
             foreach (GameDataMapNpc npc in map.Data.Npcs ?? []) {
-                //AddVertex(new(map, npc.GetPosition()));
+                Vector2? pos = npc.GetPosition();
+                if (pos != null) {
+                    //AddVertex(new(map, pos.Value));
+                }
             }
 
             // Adding vertices for each connection point and creating edges between them.
@@ -108,12 +111,12 @@ public class MapGraph {
 
         // Generate a path from start to rampOn, and from rampOff to goal.
         // Note that they will be null if these vertices are the same as the start or goal (e.g. already in graph).
-        MapGraphEdgeIntraMap? startToRampOn = start != rampOn ? start.Map.FindPath(start.Location, rampOn.Location, settings) : null;
-        MapGraphEdgeIntraMap? rampOffToGoal = goal != rampOff ? goal.Map.FindPath(rampOff.Location, goal.Location, settings) : null;
+        MapGraphEdgeIntraMap? startToRampOn = start.Map.FindPath(start.Location, rampOn.Location, settings);
+        MapGraphEdgeIntraMap? rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
 
         // In the event that this is a direct path (same map), try generating a path directly.
         // This will prevent us from bouncing between vertices. Note that we still want to run Dijkstra's to look for cool shortcuts.
-        MapGraphEdgeIntraMap? directPath = start.Map == goal.Map ? start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 100 }) : null;
+        MapGraphEdgeIntraMap? directPath = start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 100 });
 
         dist[start] = 0;
         Q.Enqueue(start, 0);

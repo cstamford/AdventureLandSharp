@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
@@ -30,10 +31,11 @@ public class BasicCharacter : ICharacter {
             new If(() => _traversal.CurrentEdge is MapGraphEdgeTeleport, new Success()),
 
             // If we need to drink a potion, do it.
-            ConsumePotions(),
+            ConsumePotions()
 
             // If we have any enemies within attack range, bash them.
-            new Do(AttackNearbyEnemy)
+            // Note: Disabled for now, as BasicCharacter is mostly used as a movement test.
+            //new Do(AttackNearbyEnemy)
         );
 
         _btMovement = new Selector(
@@ -72,9 +74,12 @@ public class BasicCharacter : ICharacter {
             new(_world.GetMap("winterland"), new(1245, -1490)),
         ];
 
-        return new(_socket, _world.FindRoute(
-            new(_world.GetMap(Me.MapName), Me.Position),
-            interestingGoals[Random.Shared.Next(interestingGoals.Length)]));
+        MapLocation start = new(_world.GetMap(Me.MapName), Me.Position);
+        MapLocation end = interestingGoals[Random.Shared.Next(interestingGoals.Length)];
+        IEnumerable<IMapGraphEdge> edges = _world.FindRoute(start, end);
+        Debug.Assert(edges.Any() || start == end, "No route found: the code will cope with this, but create a unit test and investigate.");
+
+        return new(_socket, edges, end);
     }
 
     private Status AttackNearbyEnemy() {

@@ -4,9 +4,8 @@ using AdventureLandSharp.Core.SocketApi;
 
 namespace AdventureLandSharp;
 
-public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
-    public MapLocation Start => _start;
-    public MapLocation End => _end;
+public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, MapLocation end) {
+    public MapLocation End => end;
     public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
     public IMapGraphEdge? CurrentEdge => _edge;
 
@@ -33,8 +32,6 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
     
     private LocalPlayer Player => socket.Player;
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
-    private readonly MapLocation _start = edges.First().Source;
-    private readonly MapLocation _end = edges.Last().Dest;
 
     private bool CurrentEdgeFinished => _edge != null && _edge switch { 
         MapGraphEdgeInterMap interMap => 
