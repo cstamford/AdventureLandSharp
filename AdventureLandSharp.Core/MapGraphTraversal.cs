@@ -7,23 +7,25 @@ namespace AdventureLandSharp;
 public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) {
     public MapLocation Start => _start;
     public MapLocation End => _end;
-    public bool Finished => (_edge == null || CurrentEdgeFinished || CurrentEdgeInvalid) && _edges.Count == 0;
+    public bool Finished => (_edge == null || CurrentEdgeFinished) && _edges.Count == 0;
     public IMapGraphEdge? CurrentEdge => _edge;
 
     public void Update() {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-
-        while (!Finished && (CurrentEdgeFinished || CurrentEdgeInvalid)) {
-            _edge = _edges.TryDequeue(out IMapGraphEdge? edge) ? edge : null;
-            _edgeUpdate = now;
-            Player.MovementPlan = null;
-        }
-
         if (Finished) {
             return;
         }
 
-        if (now >= _edgeUpdate) {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        if (!CurrentEdgeValid || CurrentEdgeFinished) {
+            _edge = null;
+            _edgeUpdate = now;
+            Player.MovementPlan = null;
+        }
+
+        _edge ??= _edges.Dequeue();
+
+        if (CurrentEdgeValid && now >= _edgeUpdate) {
             ProcessEdge();
             _edgeUpdate = NextEdgeUpdate(now);
         }
@@ -45,7 +47,9 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges) 
         _ => true 
     };
 
-    private bool CurrentEdgeInvalid => _edge?.Source.Map.Name != Player.MapName;
+    private bool CurrentEdgeValid => _edge != null && 
+        (Player.MapName == _edge.Source.Map.Name || 
+        (_edge is MapGraphEdgeInterMap && Player.MapName == _edge.Dest.Map.Name));
 
     private IMapGraphEdge? _edge;
     private DateTimeOffset _edgeUpdate;
