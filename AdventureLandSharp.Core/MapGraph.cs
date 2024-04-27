@@ -51,7 +51,7 @@ public class MapGraph {
             foreach (GameDataMapNpc npc in map.Data.Npcs ?? []) {
                 Vector2? pos = npc.GetPosition();
                 if (pos != null) {
-                    //AddVertex(new(map, pos.Value));
+                    AddVertex(new(map, pos.Value));
                 }
             }
 
