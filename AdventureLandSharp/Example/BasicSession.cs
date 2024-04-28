@@ -28,7 +28,7 @@ public class BasicSession(
                 _gui = new(_world, _socket);
             }
 
-            while (!_socket.Connected) {
+            while (!_disposed && !_socket.Connected) {
                 _socket.Update();
                 Thread.Yield();
             }
@@ -71,20 +71,12 @@ public class BasicSession(
     private void DoOneRun() {
         Debug.Assert(_socket != null && _socket.Connected);
 
-        ICharacter character = characterFactory(_world, _socket!, _settings.Character.Type switch {
-            "mage" => CharacterClass.Mage,
-            "merchant" => CharacterClass.Merchant,
-            "paladin" => CharacterClass.Paladin,
-            "priest" => CharacterClass.Priest,
-            "ranger" => CharacterClass.Ranger,
-            "rogue" => CharacterClass.Rogue,
-            "warrior" => CharacterClass.Warrior,
-            _ => throw new()
-        });
+        CharacterClass cls = Enum.Parse<CharacterClass>(_settings.Character.Type, ignoreCase: true);
+        ICharacter character = characterFactory(_world, _socket, cls);
 
         OnInit?.Invoke(_socket, character);
 
-        while (_socket.Connected) {
+        while (!_disposed && _socket.Connected) {
             _socket.Update();
 
             if (_gui != null && !_gui.Update()) {

@@ -14,7 +14,7 @@ public enum CharacterClass {
 };
 
 public interface ICharacter {
-    public LocalPlayer Me { get; }
+    public LocalPlayer Entity { get; }
     public bool Update();
 }
 
