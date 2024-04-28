@@ -6,6 +6,7 @@ namespace AdventureLandSharp.Core;
 public interface IMapGraphEdge {
     public MapLocation Source { get; }
     public MapLocation Dest { get; }
+    public float Cost { get; }
 }
 
 class MapGraphEdgeComparer : IEqualityComparer<IMapGraphEdge> {
@@ -19,6 +20,7 @@ class MapGraphEdgeComparer : IEqualityComparer<IMapGraphEdge> {
 
 public readonly record struct MapGraphEdgeInterMap(MapLocation Source, MapLocation Dest, long DestSpawnId, MapConnectionType Type) : IMapGraphEdge {
     public override readonly string ToString() => $"{Type} from {Source} to {Dest}.";
+    public float Cost => 1;
 }
 
 public readonly record struct MapGraphEdgeIntraMap(MapLocation Source, MapLocation Dest, List<Vector2> Path, float Cost) : IMapGraphEdge {
@@ -27,6 +29,7 @@ public readonly record struct MapGraphEdgeIntraMap(MapLocation Source, MapLocati
 
 public readonly record struct MapGraphEdgeTeleport(MapLocation Source, MapLocation Dest) : IMapGraphEdge {
     public override readonly string ToString() => $"Teleporting from {Source} to {Dest}.";
+    public float Cost => 10;
 }
 
 public class MapGraph {
@@ -135,12 +138,7 @@ public class MapGraph {
 
             void VisitEdge(IMapGraphEdge edge) {
                 MapLocation vLoc = edge.Dest;
-
-                float alt = 1 + dist[u] + (edge switch {
-                    MapGraphEdgeIntraMap intra => intra.Cost,
-                    MapGraphEdgeTeleport => 25,
-                    _ => 1
-                });
+                float alt = 1 + dist[u] + edge.Cost;
 
                 if (!dist.TryGetValue(vLoc, out float prevAlt) || alt < prevAlt) {
                     prev[vLoc] = edge;
