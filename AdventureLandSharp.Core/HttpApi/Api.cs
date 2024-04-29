@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Core.HttpApi;
 
@@ -13,6 +14,7 @@ public static class Api {
     public static async Task<ApiAuthState> LoginAsync(ApiAddress addr, ApiCredentials creds) {
         HttpResponseMessage res = await CallApiAsync(addr, new SignupOrLoginRequest(creds.Email, creds.Password));
         SignupOrLoginResponse body = await ExtractResponse<SignupOrLoginResponse>(res);
+        Log.Info($"Login result: {body}");
 
         string authToken = res.Headers.GetValues("Set-Cookie").First().Split(';').First().Replace("auth=", "");
         string[] splitToken = authToken.Split('-');

@@ -13,12 +13,12 @@ public readonly record struct ConnectionSettings(
     ApiCharacter Character);
 
 public class Connection(ConnectionSettings settings) : IDisposable {
+    public event Action? OnCreateSocket;
     public event Action<JsonElement>? OnConnected;
     public event Action? OnDisconnected;
 
     public bool Connected => _connected && _authenticated && _ready;
     public ConnectionSettings Settings => settings;
-    public SocketIOClient.SocketIO? SocketIo => _socketIo;
 
     public void Update() {
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -46,11 +46,51 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         CloseExistingConnection();
     }
 
+    public Task EmitAsync(string name, object data) {
+        Debug.Assert(_socketIo != null);
+
+        return _socketIo.EmitAsync(name, data);
+    }
+
+    public void On(string name, Action<SocketIOResponse> cb) {
+        Debug.Assert(_socketIo != null);
+
+        if (!_handlers.TryGetValue(name, out List<Action<SocketIOResponse>>? handlers)) {
+            _socketIo.On(name, e => {
+                foreach (Action<SocketIOResponse> handler in _handlers[name]) {
+                    try {
+                        handler(e);
+                    } catch (Exception ex) {
+                        HandleError(name, e, ex);
+                    }
+                }
+            });
+
+            handlers = [];
+            _handlers.Add(name, handlers);
+        }
+
+        handlers.Add(cb);
+    }
+
+    public void OnAny(Action<string, SocketIOResponse> cb) {
+        Debug.Assert(_socketIo != null);
+
+        _socketIo.OnAny((name, e) => {
+            try {
+                cb(name, e);
+            } catch (Exception ex) {
+                HandleError(name, e, ex);
+            }
+        });
+    }
+
     private readonly Logger _log = new(settings.Character.Name, "CONNECTION");
 
     private SocketIOClient.SocketIO? _socketIo;
     private DateTimeOffset _authTimeout = DateTimeOffset.UtcNow;
     private DateTimeOffset _reconnectTimeout = DateTimeOffset.UtcNow;
+    private Dictionary<string, List<Action<SocketIOResponse>>> _handlers = [];
 
     private bool _connected;
     private bool _authenticated;
@@ -59,20 +99,27 @@ public class Connection(ConnectionSettings settings) : IDisposable {
     private void StartConnection() {
         _socketIo = new($"http://{settings.Server.Addr}:{settings.Server.Port}");
 
-        SafeSocketOn("welcome", async _ => {
+        try {
+            OnCreateSocket?.Invoke();
+        } catch (Exception e) {
+            HandleError("(user) OnCreateSocket", e);
+        }
+
+        On("welcome", _ => {
             _log.Info($"Welcome message received. Responding with loaded message.");
-            await _socketIo.EmitAsync("loaded", new Outbound.Loaded(
+            _socketIo.EmitAsync("loaded", new Outbound.Loaded(
                 Success: true,
                 Width: 1920,
                 Height: 1080,
                 Scale: 2));
         });
 
-        SafeSocketOn("entities", async e => {
+        On("entities", e => {
             if (!_authenticated) {
-                _log.Info($"Initial entities message received. Responding with auth message.");
+                _authenticated = true;
 
-                await _socketIo.EmitAsync("auth", new Outbound.Auth(
+                _log.Info($"Initial entities message received. Responding with auth message.");
+                _socketIo.EmitAsync("auth", new Outbound.Auth(
                     AuthToken: settings.AuthToken,
                     CharacterId: settings.Character.Id,
                     UserId: settings.UserId,
@@ -82,18 +129,15 @@ public class Connection(ConnectionSettings settings) : IDisposable {
                     NoHtml: false,
                     NoGraphics: false
                 ));
-
-                _authenticated = true;
             }
         });
 
-        SafeSocketOn("start", e => {
+        On("start", e => {
             _log.Info($"Start message received.");
             OnConnected?.Invoke(e.GetValue<JsonElement>());
             _ready = true;
         });
 
-        _socketIo.On("disconnect_reason", e => _log.Error($"disconnect_reason: {e}"));
         _socketIo.OnDisconnected += (_, e) => HandleError("_socketIo.OnDisconnected", e);
         _socketIo.OnError += (_, e) => HandleError("_socketIo.OnError", e);
 
@@ -109,18 +153,6 @@ public class Connection(ConnectionSettings settings) : IDisposable {
     private void HandleError(string type, object e, Exception ex) {
         _log.Error($"{type}: {e} with exception: {ex}");
         CloseExistingConnection();
-    }
-
-    private void SafeSocketOn(string name, Action<SocketIOResponse> cb) {
-        Debug.Assert(_socketIo != null);
-    
-        _socketIo.On(name, e => {
-            try {
-                cb(e);
-            } catch(Exception ex) {
-                HandleError(name, e, ex);
-            }
-        });
     }
 
     private void CloseExistingConnection() {
@@ -141,5 +173,6 @@ public class Connection(ConnectionSettings settings) : IDisposable {
 
         _authenticated = false;
         _connected = false;
+        _handlers.Clear();
     }
 }

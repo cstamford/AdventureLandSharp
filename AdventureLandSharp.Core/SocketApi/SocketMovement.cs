@@ -1,4 +1,5 @@
 using System.Numerics;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Core.SocketApi;
 
@@ -20,7 +21,7 @@ public class DestinationMovementPlan(Vector2 start, Vector2 goal) : ISocketEntit
 
     public bool Update(double dt, double speed) {
         Vector2 dir = Vector2.Normalize(goal - start);
-        float distance = Vector2.Distance(goal, start);
+        float distance = goal.SimpleDist(start);
         float step = (float)(speed * dt);
         start = step < distance ? start + dir * step : goal;
         return Finished;
@@ -36,7 +37,7 @@ public class PathMovementPlan(Vector2 start, Queue<Vector2> path) : ISocketEntit
     public bool Update(double dt, double speed) {
         while (dt > 0 && path.TryPeek(out Vector2 subgoal)) {
             Vector2 dir = Vector2.Normalize(subgoal - start);
-            float distance = Vector2.Distance(subgoal, start);
+            float distance = subgoal.SimpleDist(start);
             float step = (float)(speed * dt);
 
             if (step < distance) {

@@ -7,8 +7,9 @@ using System.Text.Json.Serialization;
 namespace AdventureLandSharp.Core.SocketApi;
 
 [AttributeUsage(AttributeTargets.Struct)]
-public class InboundSocketMessageAttribute(string name) : Attribute {
+public class InboundSocketMessageAttribute(string name, bool debug = false) : Attribute {
     public string Name => name;
+    public bool Debug => debug;
 }
 
 public static class Inbound {
@@ -152,13 +153,6 @@ public static class Inbound {
         [property: JsonPropertyName("name")] string Name
     );
 
-    [InboundSocketMessage("limitdcreport")]
-    public readonly record struct LimitDcReportData(
-        [property: JsonPropertyName("calls")] JsonElement Calls,
-        [property: JsonPropertyName("climit")] int UsedCallCost,
-        [property: JsonPropertyName("total")] int TotalCalls
-    );
-
     [InboundSocketMessage("magiport")]
     public readonly record struct MagiportData(
         [property: JsonPropertyName("name")] string Name
@@ -255,25 +249,25 @@ public readonly record struct EntityStats(
 
 public readonly record struct EntityVitals(
     [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("rip")] bool Dead,
-    [property: JsonPropertyName("hp"), JsonRequired()] float Hp,
-    [property: JsonPropertyName("mp"), JsonRequired()] float Mp,
-    [property: JsonPropertyName("max_hp")] float MaxHp,
-    [property: JsonPropertyName("max_mp")] float MaxMp
+    [property: JsonPropertyName("hp"), JsonRequired()] int Hp,
+    [property: JsonPropertyName("mp"), JsonRequired()] int Mp,
+    [property: JsonPropertyName("max_hp")] int MaxHp,
+    [property: JsonPropertyName("max_mp")] int MaxMp
 ) {
     public EntityVitals(GameDataMonster monsterDef) : this(
         Dead: false,
-        Hp: (float)monsterDef.Hp,
-        MaxHp: (float)monsterDef.Hp,
-        Mp: (float)monsterDef.Mp,
-        MaxMp: (float)monsterDef.Mp)
+        Hp: (int)monsterDef.Hp,
+        MaxHp: (int)monsterDef.Hp,
+        Mp: (int)monsterDef.Mp,
+        MaxMp: (int)monsterDef.Mp)
     { }
 
     public EntityVitals Update(JsonElement source) => this with {
         Dead = source.GetBool("rip", false),
-        Hp = source.GetFloat("hp", Hp),
-        Mp = source.GetFloat("mp", Mp),
-        MaxHp = source.GetFloat("max_hp", MaxHp),
-        MaxMp = source.GetFloat("max_mp", MaxMp)
+        Hp = source.GetInt("hp", Hp),
+        Mp = source.GetInt("mp", Mp),
+        MaxHp = source.GetInt("max_hp", MaxHp),
+        MaxMp = source.GetInt("max_mp", MaxMp)
     };
 }
 

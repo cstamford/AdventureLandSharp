@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Numerics;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Core;
 
@@ -95,15 +96,20 @@ public class MapGraph {
         Dictionary<MapLocation, float> dist = [];
         Dictionary<MapLocation, IMapGraphEdge> prev = [];
 
-        // Get the nearest vertex to the start and goal locations.
-        MapLocation rampOn = _vertices
+        // Get the nearest vertex to the start, preferring one that is towards the goal.
+        // This prevents bouncing backwards if the nearest vertex is behind us, and then forwards again.
+        IEnumerable<MapLocation> rampOnCandidates = _vertices
             .Where(x => x.Map == start.Map)
-            .OrderBy(x => Vector2.Distance(start.Location, x.Location))
-            .First();
+            .OrderBy(x => start.Location.SimpleDist(x.Location));
 
+        if (!rampOnCandidates.TryFirst(x => Vector2.Dot(start.Location - x.Location, start.Location - goal.Location) > 0, out MapLocation rampOn)) {
+            rampOn = rampOnCandidates.First(); // fall back to the closest
+        }
+
+        // Get the nearest vertex to the end.
         MapLocation rampOff = _vertices
             .Where(x => x.Map == goal.Map)
-            .OrderBy(x => Vector2.Distance(goal.Location, x.Location))
+            .OrderBy(x => goal.Location.SimpleDist(x.Location))
             .First();
 
         // Generate a path from start to rampOn, and from rampOff to goal.
@@ -112,9 +118,10 @@ public class MapGraph {
         MapGraphEdgeIntraMap? rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
 
         // In the event that this is a direct path (same map), try generating a path directly.
-        // This will prevent us from bouncing between vertices. Note that we still want to run Dijkstra's to look for cool shortcuts.
+        // This will prevent us from bouncing between vertices.
+        // Note that we still want to run Dijkstra's to look for cool shortcuts.
         MapGraphEdgeIntraMap? directPath = start.Map == goal.Map ?
-            start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 100 }) :
+            start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 512 }) :
             null;
 
         dist[start] = 0;

@@ -7,11 +7,17 @@ namespace AdventureLandSharp.Core;
 public static class GameConstants {
     public const int VisionWidth = 700;
     public const int VisionHeight = 500;
+    public const int BuyDist = 400;
     public const int SellDist = 400;
     public const int LootDist = 400;
     public const int TradeDist = 400;
+    public const int BankDist = 400;
     public const int DoorDist = 112;
     public const int TransporterDist = 160;
+    public const int PlayerWidth = 26;
+    public const int PlayerHeight = 36;
+    public const int DefaultEntityWidth = 24;
+    public const int DefaultEntityHeight = 24;
 }
 
 public readonly record struct GameLevelGeometry(
@@ -158,5 +164,13 @@ public readonly record struct GameData(
     [property: JsonPropertyName("games")] Dictionary<string, object> Games,
     [property: JsonPropertyName("sets")] Dictionary<string, object> Sets,
     [property: JsonPropertyName("drops")] Dictionary<string, object> Drops,
-    [property: JsonPropertyName("sprites")] Dictionary<string, object> Sprites
-);
+    [property: JsonPropertyName("sprites")] Dictionary<string, object> Sprites)
+{
+    public Vector2 GetMonsterSize(string monsterType) {
+        if (!Dimensions.TryGetValue(monsterType, out double[]? monsterSize)) {
+            monsterSize = [GameConstants.DefaultEntityWidth, GameConstants.DefaultEntityHeight];
+        }
+
+        return new((float)monsterSize[0], (float)monsterSize[1]);
+    }
+}

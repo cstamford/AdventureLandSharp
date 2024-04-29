@@ -33,6 +33,16 @@ public class World {
     public Map GetMap(string mapName) => _maps[mapName];
     public bool TryGetMap(string mapName, out Map map) => _maps.TryGetValue(mapName, out map!);
 
+    public MapLocation BankLocation => GetMap("bank").DefaultSpawn;
+    public MapLocation UpgradeLocations => new(GetMap("main"), new(-204, -129));
+    public MapLocation ExchangeLocations => new(GetMap("main"), new(-26, -432));
+    public IEnumerable<MapLocation> PotionLocations => [
+        new(GetMap("halloween"), new(149, -182)),
+        new(GetMap("winter_inn"), new(-84, -173)),
+        new(GetMap("main"), new(56, -122))
+    ];
+    public MapLocation ScrollsLocation => new(GetMap("main"), new(-465, -71));
+
     private readonly GameData _data;
     private readonly Dictionary<string, Map> _maps;
     private readonly MapGraph _mapsGraph;
@@ -62,7 +72,8 @@ public class World {
                 MapGraphEdgeIntraMap? mergedEdge = mergeStart.Map.FindPath(
                     mergeStart.Location,
                     mergeGoal.Location,
-                    settings with { MaxCost = 100 });
+                    settings with { MaxCost = 64 }
+                );
 
                 if (mergedEdge != null) {
                     edges[i] = mergedEdge;

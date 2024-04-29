@@ -153,4 +153,12 @@ public static class Outbound {
         [property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("ids")] string[] Ids
     );
+
+    [OutboundSocketMessage("skill")]
+    public readonly record struct UseSkillEnergize(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("mp")] int Mp)
+    {
+        [property: JsonPropertyName("name")] public string Name { get; } = "energize";
+    }
 }

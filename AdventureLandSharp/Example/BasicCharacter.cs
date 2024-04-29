@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
+using AdventureLandSharp.Core.Util;
 using AdventureLandSharp.Helpers;
 using AdventureLandSharp.Interfaces;
 using AdventureLandSharp.Utility;
@@ -87,7 +87,7 @@ public class BasicCharacter : ICharacter {
     private Status AttackNearbyEnemy() {
         if (_attackCd.Ready) {
             Monster? target = Enemies
-                .Select(x => (monster: x, distance: Vector2.Distance(Me.Position, x.Position)))
+                .Select(x => (monster: x, distance: Me.Dist(x)))
                 .Where(x => x.distance <= Me.AttackRange)
                 .OrderBy(x => x.distance)
                 .Select(x => x.monster)

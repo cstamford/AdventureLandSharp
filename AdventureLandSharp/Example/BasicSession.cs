@@ -22,7 +22,7 @@ public class BasicSession(
 
     public void EnterUpdateLoop() {
         while (!_disposed) {
-            _socket = new(_world.Data, _settings, OnSend, OnRecv);
+            _socket = new(_world.Data, _settings);
 
             if (withGui) {
                 _gui = new(_world, _socket);
@@ -57,16 +57,6 @@ public class BasicSession(
     private Socket? _socket;
     private BasicSessionGui? _gui;
     private bool _disposed = false;
-
-    private void OnRecv(string evt, object data) {
-        string dataStr = data.ToString()!;
-        _log.Debug($"RECV <--- {evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
-    }
-
-    private void OnSend(string evt, object data) {
-        string dataStr = data.ToString()!;
-        _log.Debug($"SEND ---> {evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
-    }
 
     private void DoOneRun() {
         Debug.Assert(_socket != null && _socket.Connected);

@@ -21,9 +21,10 @@ public abstract class Entity {
     public float Speed => Stats.Speed;
     public float AttackDamage => Stats.AttackDamage;
     public TimeSpan AttackSpeed => TimeSpan.FromMilliseconds(1000.0 / Stats.AttackFrequency);
-    public float AttackRange => Stats.AttackRange;
+    public virtual float AttackRange => Stats.AttackRange;
     public float DPS => (float)(AttackDamage / AttackSpeed.TotalSeconds);
 
+    public virtual Vector2 Size => new(GameConstants.DefaultEntityWidth, GameConstants.DefaultEntityHeight);
     public virtual string Name => _name;
 
     public string Id { get; protected set; }
@@ -103,13 +104,18 @@ public abstract class Entity {
         null;
 }
 
-public sealed class Monster(JsonElement source, GameDataMonster monsterDef) : Entity(source, monsterDef);
+public sealed class Monster(JsonElement source, GameDataMonster monsterDef, Vector2 size) : Entity(source, monsterDef) {
+    public GameDataMonster MonsterDef { get; } = monsterDef;
+    public override Vector2 Size => size;
+}
+
 public sealed class Npc(JsonElement source) : Entity(source) {
     public override string Name => Id[1..];
 }
 
 public class Player(JsonElement source) : Entity(source) {
     public string OwnerId { get; private set; } = source.GetString("owner");
+    public override Vector2 Size => new(GameConstants.PlayerWidth, GameConstants.PlayerHeight);
 
     public override void Update(JsonElement source) {
         base.Update(source);
@@ -125,6 +131,9 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public PlayerEquipment Equipment { get; private set; } = source.GetProperty("slots").Deserialize<PlayerEquipment>();
     public PlayerBank? Bank { get; private set; } = ReadPlayerBank(source);
 
+    public override float AttackRange => base.AttackRange + ExtraRange;
+    public float ExtraRange { get; private set; } = source.GetFloat("xrange", 0);
+
     // This is the position that the player is currently moving towards.
     public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
 
@@ -136,6 +145,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
         Bank = ReadPlayerBank(source);
+        ExtraRange = source.GetFloat("xrange", ExtraRange);
         GoingPosition = null; // we handle this locally, and always ignore remote
     }
 

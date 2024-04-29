@@ -1,6 +1,7 @@
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp;
 
@@ -92,7 +93,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             };
 
             if (cuttableDistance > 0) {
-                int cutIdx = edge.Path.FindIndex(x => Vector2.Distance(x, nextEdgeInter.Source.Location) < cuttableDistance);
+                int cutIdx = edge.Path.FindIndex(x => x.SimpleDist(nextEdgeInter.Source.Location) < cuttableDistance);
 
                 if (cutIdx != -1) {
                     edge.Path.RemoveRange(cutIdx, edge.Path.Count - cutIdx);

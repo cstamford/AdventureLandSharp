@@ -24,48 +24,25 @@ public class Socket : IDisposable {
 
     public Socket(
         GameData gameData,
-        ConnectionSettings settings,
-        Action<string, object>? fnOnEmit = null,
-        Action<string, object>? fnOnRecv = null)
+        ConnectionSettings settings)
     {
         _log = new(settings.Character.Name, "SOCKET");
         _gameData = gameData;
         _connection = new(settings);
 
-        _connection.OnConnected += (x) => {
-            _log.Info($"Connected to server.");
+        HashSet<string> handledEvents = [];
 
-            MethodInfo? recvPlayer = typeof(Socket).GetMethod(
-                nameof(Recv_Player),
-                BindingFlags.Instance | BindingFlags.NonPublic,
-                [ typeof(JsonElement) ]
-            );
-
-            Debug.Assert(recvPlayer != null);
-            _player = new LocalPlayer(x);
-
-            _connection.SocketIo!.On("player", e => {
-                _recvQueue.Enqueue(("player", recvPlayer, e.GetValue<JsonElement>()));
-            });
-        };
-
-        _connection.OnDisconnected += () => {
-            _log.Info($"Disconnected from server.");
-        };
-
-        OnEmit += fnOnEmit;
-        OnRecv += fnOnRecv;
-
-        foreach ((Type type, MethodInfo method, string name) in Assembly.GetExecutingAssembly().GetTypes()
+        foreach ((Type type, MethodInfo method, string name, bool debug) in Assembly.GetExecutingAssembly().GetTypes()
             .Select(x => (type: x, attr: x.GetCustomAttribute<InboundSocketMessageAttribute>()))
             .Where(x => x.attr != null)
             .Select(x => (
                 x.type,
+                method: typeof(Socket).GetMethod("Recv", BindingFlags.Instance | BindingFlags.NonPublic, [ x.type ]),
                 name: x.attr!.Name,
-                method: typeof(Socket).GetMethod("Recv", BindingFlags.Instance | BindingFlags.NonPublic, [ x.type ]
-            )))
+                debug: x.attr!.Debug
+            ))
             .Where(x => x.method != null)
-            .Select(x => (x.type, x.method!, x.name))
+            .Select(x => (x.type, x.method!, x.name, x.debug))
         ) {
             MethodInfo? socketGetValueMethod = typeof(SocketIOClient.SocketIOResponse).GetMethod(
                 nameof(SocketIOClient.SocketIOResponse.GetValue),
@@ -76,16 +53,49 @@ public class Socket : IDisposable {
             MethodInfo? genericMethod = socketGetValueMethod.MakeGenericMethod(type);
             Debug.Assert(genericMethod != null, "Could not create generic method for GetValue.");
 
-            _connection.OnConnected += _ => {
-                _connection.SocketIo!.On(name, e => {
-                    try {
-                        object? data = genericMethod.Invoke(e, [0]);
-                        Debug.Assert(data != null, "Could not get data from SocketIOResponse.");
-                        _recvQueue.Enqueue((name, method, data));
-                    } catch (Exception ex) {
-                        _log.Error($"(system) Error processing message {name}: {ex}");
+            _connection.OnCreateSocket += () => _connection.On(name, e => LowLevelRecv(name, e, debug, genericMethod, method));
+            handledEvents.Add(name);
+        }
+
+        _connection.OnCreateSocket += () => {
+            _connection.On("limitdcreport", e => _log.Error($"limitdcreport: {e}"));
+            _connection.On("disconnect_reason", e => _log.Error($"disconnect_reason: {e}"));
+
+            MethodInfo? recvPlayer = typeof(Socket).GetMethod(
+                nameof(Recv_Player),
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                [ typeof(JsonElement) ]
+            );
+            Debug.Assert(recvPlayer != null);
+            _connection.On("player", e => _recvQueue.Enqueue(("player", recvPlayer, e.GetValue<JsonElement>())));
+        };
+
+        _connection.OnConnected += (e) => {
+            _log.Info($"Connected to server.");
+            _player = new LocalPlayer(e);
+  
+            if (Log.LogLevelEnabled(LogLevel.Debug)) {
+                _connection.OnAny((name, e) => {
+                    if (!handledEvents.Contains(name)) {
+                        _log.Debug(["RECV", "UNKNOWN"], $"{name} {e}");
                     }
                 });
+            }
+        };
+
+        _connection.OnDisconnected += () => {
+            _log.Info($"Disconnected from server.");
+        };
+
+        if (Log.LogLevelEnabled(LogLevel.DebugVerbose)) {
+            OnEmit += (evt, data) => {
+                string dataStr = data.ToString()!;
+                _log.DebugVerbose(["SEND"], $"{evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
+            };
+
+            OnRecv += (evt, data) => {
+                string dataStr = data.ToString()!;
+                _log.DebugVerbose(["RECV"], $"{evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
             };
         }
     }
@@ -104,7 +114,7 @@ public class Socket : IDisposable {
             _log.Error($"(user) Error emitting message {name}: {ex}");
         }
 
-        return _connection.SocketIo!.EmitAsync(name, evt);
+        return _connection.EmitAsync(name, evt);
     }
 
     public bool TryGetEntity(string id, out Entity e) => _entities.TryGetValue(id, out e!);
@@ -112,13 +122,12 @@ public class Socket : IDisposable {
     public void Update() {
         _connection.Update();
 
-        Update_DrainRecvQueue();
-        Update_CullEntities();
-
         if (!Connected) {
             return;
         }
 
+        Update_DrainRecvQueue();
+        Update_CullEntities();
         Update_Tick();
         Update_NetMovement();
     }
@@ -136,6 +145,20 @@ public class Socket : IDisposable {
 
     private string[] _party = [];
     private LocalPlayer _player = default!;
+
+    private void LowLevelRecv(string evt, object e, bool withDebug, MethodInfo getTypedData, MethodInfo dispatchRecv) {
+        try {
+            if (Log.LogLevelEnabled(LogLevel.Debug) && withDebug) {
+                _log.Debug($"{evt}: {e}");
+            }
+
+            object? data = getTypedData.Invoke(e, [0]);
+            Debug.Assert(data != null, "Could not get data from SocketIOResponse.");
+            _recvQueue.Enqueue((evt, dispatchRecv, data));
+        } catch (Exception ex) {
+            _log.Error($"(system) Error processing message {evt}: {ex}");
+        }
+    }
 
     private void Recv(Inbound.CorrectionData evt) {
         _player.On(evt);
@@ -164,6 +187,10 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.EntitiesData evt) {
+        if (!Connected) {
+            return;
+        }
+
         if (evt.Type == "all") {
             _entities.Clear();
         }
@@ -189,14 +216,11 @@ public class Socket : IDisposable {
             if (_entities.TryGetValue(id, out Entity? e)) {
                 e.Update(monster);
             } else {
-                GameDataMonster monsterDef = _gameData.Monsters[monster.GetString("type")];
-                _entities.Add(id, new Monster(monster, monsterDef));
+                string type = monster.GetString("type");
+                GameDataMonster monsterDef = _gameData.Monsters[type];
+                _entities.Add(id, new Monster(monster, monsterDef, _gameData.GetMonsterSize(type)));
             }
         }
-    }
-
-    private void Recv(Inbound.LimitDcReportData evt) {
-        _log.Info($"Limit DC Report: {evt}");
     }
 
     private void Recv(Inbound.NewMapData evt) {

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Core;
 
@@ -16,8 +17,10 @@ public readonly record struct MapLocation(Map Map, Vector2 Location) : IComparab
     }
 
     public readonly override int GetHashCode() => HashCode.Combine(Map.Name, Location.X, Location.Y);
-
     public readonly override string ToString() => $"{Map.Name} {Location}";
+
+    public readonly bool Equivalent(MapLocation other) => Map == other.Map && Location.Equivalent(other.Location);
+    public readonly bool Equivalent(MapLocation other, float epsilon) => Map == other.Map && Location.Equivalent(other.Location, epsilon);
 }
 
 public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLevelGeometry mapGeometry) {
@@ -155,7 +158,7 @@ public static class Vector2Extensions {
     public static bool Equivalent(this Vector2 a, Vector2 b) => a.Equivalent(b, MapGrid.CellWorldEpsilon/2);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Equivalent(this Vector2 a, Vector2 b, float epsilon) => Vector2.Distance(a, b) <= epsilon;
+    public static bool Equivalent(this Vector2 a, Vector2 b, float epsilon) => a.SimpleDist(b) <= epsilon;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MapGridCell Grid(this Vector2 world, Map map) => world.Grid(map.Grid);
