@@ -29,7 +29,7 @@ public class DestinationMovementPlan(Vector2 start, Vector2 goal) : ISocketEntit
 }
 
 public class PathMovementPlan(Vector2 start, Queue<Vector2> path) : ISocketEntityMovementPlan {
-    public Queue<Vector2> Path => new(path);
+    public IReadOnlyCollection<Vector2> Path => path;
     public bool Finished => path.Count == 0;
     public Vector2 Position => start;
     public Vector2 Goal => path.TryPeek(out Vector2 goal) ? goal : start;
