@@ -78,7 +78,7 @@ public class BasicSession(
             }
 
             OnTick?.Invoke(_socket, character);
-            Thread.Sleep(1);
+            HighPrecisionSleep.Sleep(1);
         }
 
         OnFree?.Invoke(_socket, character);

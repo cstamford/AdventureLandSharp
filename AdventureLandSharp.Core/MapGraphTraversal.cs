@@ -142,7 +142,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 }
 
 public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map) : ISocketEntityMovementPlan {
-    public Queue<Vector2> Path => _pathMovementPlan.Path;
+    public IReadOnlyCollection<Vector2> Path => _pathMovementPlan.Path;
     public bool Finished => _pathMovementPlan.Finished;
     public Vector2 Position  => _pathMovementPlan.Position;
     public Vector2 Goal => _clickAheadPoint;

@@ -134,7 +134,7 @@ public class BasicSessionGui : IDisposable {
             plan = modulator.Plan;
         }
 
-        Queue<Vector2> path = plan switch {
+        IReadOnlyCollection<Vector2> path = plan switch {
             DestinationMovementPlan planDest => new Queue<Vector2>([planDest.Goal]),
             PathMovementPlan planPath => planPath.Path,
             ClickAheadMovementPlan planCa => planCa.Path,
@@ -142,7 +142,7 @@ public class BasicSessionGui : IDisposable {
         };
 
         if (path.Count > 0) {
-            Raylib.DrawLineEx(e.Position, path.Peek(), 1, color);
+            Raylib.DrawLineEx(e.Position, path.First(), 1, color);
             DrawPath([.. path], color);
         }
 
