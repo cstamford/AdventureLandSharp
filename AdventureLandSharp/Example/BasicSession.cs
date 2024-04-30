@@ -51,12 +51,12 @@ public class BasicSession(
         _disposed = true;
     }
 
-    private readonly World _world = world;
-    private readonly ConnectionSettings _settings = settings;
-    private readonly Logger _log = new(settings.Character.Name, "SESSION");
-    private Socket? _socket;
-    private BasicSessionGui? _gui;
-    private bool _disposed = false;
+    protected readonly World _world = world;
+    protected readonly ConnectionSettings _settings = settings;
+    protected readonly Logger _log = new(settings.Character.Name, "SESSION");
+    protected Socket? _socket;
+    protected BasicSessionGui? _gui;
+    protected bool _disposed = false;
 
     private void DoOneRun() {
         Debug.Assert(_socket != null && _socket.Connected);
@@ -78,7 +78,7 @@ public class BasicSession(
             }
 
             OnTick?.Invoke(_socket, character);
-            Thread.Yield();
+            Thread.Sleep(1);
         }
 
         OnFree?.Invoke(_socket, character);

@@ -157,7 +157,7 @@ public readonly record struct GameData(
     [property: JsonPropertyName("npcs")] Dictionary<string, GameDataNpc> Npcs,
     [property: JsonPropertyName("geometry")] Dictionary<string, GameLevelGeometry> Geometry,
     [property: JsonPropertyName("items")] Dictionary<string, GameItem> Items,
-    [property: JsonPropertyName("levels")] Dictionary<string, object> Levels,
+    [property: JsonPropertyName("levels")] Dictionary<int, long> Levels,
     [property: JsonPropertyName("events")] Dictionary<string, object> Events,
     [property: JsonPropertyName("skills")] Dictionary<string, object> Skills,
     [property: JsonPropertyName("classes")] Dictionary<string, object> Classes,
