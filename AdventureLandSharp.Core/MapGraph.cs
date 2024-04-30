@@ -104,8 +104,8 @@ public class MapGraph {
 
         // Fall back to the closest vertex if we can't find one that is towards the goal.
         MapLocation rampOn = rampOnCandidates
-            .Where(x => Vector2.Dot(start.Location - x.Location, start.Location - goal.Location) > 0) 
-            .FirstOrNull() ?? rampOnCandidates.First();
+            .FirstOrNull(x => Vector2.Dot(start.Location - x.Location, start.Location - goal.Location) > 0) 
+            ?? rampOnCandidates.First();
 
         // Get the nearest vertex to the end.
         MapLocation rampOff = _vertices
