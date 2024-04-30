@@ -109,8 +109,14 @@ public sealed class Monster(JsonElement source, GameDataMonster monsterDef, Vect
     public override Vector2 Size => size;
 }
 
-public sealed class Npc(JsonElement source) : Entity(source) {
-    public override string Name => Id[1..];
+public sealed class Npc : Entity {
+    public override string Name => _name;
+
+    public Npc(JsonElement source) : base(source) {
+        _name = Id[1..];
+    }
+
+    private readonly string _name;
 }
 
 public class Player(JsonElement source) : Entity(source) {
