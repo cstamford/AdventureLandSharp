@@ -188,22 +188,25 @@ public class MapGrid {
         }
 
         MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
-        PriorityQueue<MapGridCell, float> queue = new();
-        HashSet<MapGridCell> closed = [];
+        DenseMap<MapGridCell, (float, MapGridCell)> dict = _dictPool.Value!;
+        FastPriorityQueue<MapGridCell> Q = _queuePool.Value!;
 
-        queue.Enqueue(start, 0);
-        closed.Add(start);
+        dict.Clear();
+        dict.Emplace(start, default);
 
-        while (queue.TryDequeue(out MapGridCell pos, out _)) {
+        Q.Clear();
+        Q.Enqueue(start, 0);
+
+        while (Q.TryDequeue(out MapGridCell pos, out _)) {
             if (IsWalkable(pos)) {
                 return pos;
             }
 
             foreach (MapGridCell offset in _neighbourOffsets) {
                 MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
-                if (!closed.Contains(neighbour)) {
-                    queue.Enqueue(neighbour, neighbour.Cost(start, heuristic));
-                    closed.Add(neighbour);
+                if (!dict.Contains(neighbour)) {
+                    Q.Enqueue(neighbour, neighbour.Cost(start, heuristic));
+                    dict.Emplace(neighbour, default);
                 }
             }
         }
