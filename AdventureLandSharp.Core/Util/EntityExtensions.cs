@@ -50,14 +50,14 @@ public static class EntityExtensions {
 
         float min = float.MaxValue;
 
-        Vector2[] aCorners = [
+        Span<Vector2> aCorners = [
             new(a_x + a_w2, a_y - a_h),
             new(a_x + a_w2, a_y),
             new(a_x - a_w2, a_y - a_h),
             new(a_x - a_w2, a_y)
         ];
 
-        Vector2[] bCorners = [
+        Span<Vector2> bCorners = [
             new(b_x + b_w2, b_y - b_h),
             new(b_x + b_w2, b_y),
             new(b_x - b_w2, b_y - b_h),
