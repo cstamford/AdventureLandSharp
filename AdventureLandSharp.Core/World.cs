@@ -16,6 +16,16 @@ public class World {
             .ToDictionary(map => map.Name);
 
         _mapsGraph = new(_maps);
+
+        _bankLocation = GetMap("bank").DefaultSpawn;
+        _upgradeLocations = new(GetMap("main"), new(-204, -129));
+        _exchangeLocations = new(GetMap("main"), new(-26, -432));
+        _potionLocations = [
+            new(GetMap("halloween"), new(149, -182)),
+            new(GetMap("winter_inn"), new(-84, -173)),
+            new(GetMap("main"), new(56, -122))
+        ];
+        _scrollsLocation = new(GetMap("main"), new(-465, -71));
     }
 
     public GameData Data => _data;
@@ -33,19 +43,21 @@ public class World {
     public Map GetMap(string mapName) => _maps[mapName];
     public bool TryGetMap(string mapName, out Map map) => _maps.TryGetValue(mapName, out map!);
 
-    public MapLocation BankLocation => GetMap("bank").DefaultSpawn;
-    public MapLocation UpgradeLocations => new(GetMap("main"), new(-204, -129));
-    public MapLocation ExchangeLocations => new(GetMap("main"), new(-26, -432));
-    public IEnumerable<MapLocation> PotionLocations => [
-        new(GetMap("halloween"), new(149, -182)),
-        new(GetMap("winter_inn"), new(-84, -173)),
-        new(GetMap("main"), new(56, -122))
-    ];
-    public MapLocation ScrollsLocation => new(GetMap("main"), new(-465, -71));
+    public MapLocation BankLocation => _bankLocation;
+    public MapLocation UpgradeLocations => _upgradeLocations;
+    public MapLocation ExchangeLocations => _exchangeLocations;
+    public MapLocation[] PotionLocations => _potionLocations;
+    public MapLocation ScrollsLocation => _scrollsLocation;
 
     private readonly GameData _data;
     private readonly Dictionary<string, Map> _maps;
     private readonly MapGraph _mapsGraph;
+
+    private readonly MapLocation _bankLocation;
+    private readonly MapLocation _upgradeLocations;
+    private readonly MapLocation _exchangeLocations;
+    private readonly MapLocation[] _potionLocations;
+    private readonly MapLocation _scrollsLocation;
 
     // Attempt to merge any adjacent intra-map edges in the same map via a direct path.
     // This can increase the accuracy (avoiding useless ramp on/off), but we limit by cost to ensure we don't have a large perf hit.
