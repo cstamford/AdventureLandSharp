@@ -366,7 +366,11 @@ public readonly record struct PlayerBank(
     public IEnumerable<(int Index, Item?[] Tab)> ValidTabs => AllTabs
         .Select((tab, i) => (i, tab))
         .Where(x => x.tab != null)
-        .Select(x => (x.i, x.tab!));
+        .Select(x => (x.i, x.tab!)
+    );
+
+    public int SlotsFree => ValidTabs.Sum(tab => GetFreeSlotsInTab(tab.Tab));
+    public int SlotsUsed => 42 * ValidTabs.Count() - SlotsFree;
 
     public static string GetMapNameForTabIdx(int tab) {
         if (tab <= 7) {
@@ -389,6 +393,9 @@ public readonly record struct PlayerInventory(
     [property: JsonPropertyName("gold")] long Gold,
     [property: JsonPropertyName("items")] List<Item?> Items)
 {
+    public int SlotsFree => Items.Count(x => x == null);
+    public int SlotsUsed => 42 - SlotsFree;
+
     public PlayerInventory Update(JsonElement source) => this with {
         Gold = source.GetLong("gold", Gold),
         Items = source.TryGetProperty("items", out JsonElement items) ? items.Deserialize<List<Item?>>()! : Items
