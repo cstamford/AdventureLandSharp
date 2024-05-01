@@ -80,14 +80,14 @@ public static class Log {
     private static readonly StreamWriter _logWriter;
     private static readonly SemaphoreSlim _logLock = new(1, 1);
 
-    private static string Message(IEnumerable<string> tags, string message) => 
-        $"[{DateTimeOffset.UtcNow:HH:mm:ss.ffff}] " + 
-        (tags.Any() ? $"{string.Join("/", tags)} {message}" : message);
+    private static string Message(LogLevel verbosity, IEnumerable<string> tags, string message) => 
+        $"{verbosity.ToString().ToUpper()} {DateTimeOffset.UtcNow:HH:mm:ss.ffff} " +
+        (tags.Any() ? $"[{string.Join("/", tags)}] {message}" : message);
 
     private static void Write(LogLevel verbosity, IEnumerable<string> tags, string message) {
         _logLock.Wait();
 
-        string msg = Message(tags, message);
+        string msg = Message(verbosity, tags, message);
         WriteFile(msg);
 
         if (_logLevelConsole <= verbosity) {
