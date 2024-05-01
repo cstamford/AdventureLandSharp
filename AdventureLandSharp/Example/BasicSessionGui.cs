@@ -50,7 +50,7 @@ public class BasicSessionGui : IDisposable {
 
             DrawMovementPlanForEntity(e, col);
             Raylib.DrawCircle((int)e.Position.X, (int)e.Position.Y, 4, col);
-            Raylib.DrawText(e.Name, (int)e.Position.X, (int)e.Position.Y - 16, 12, col);
+            Raylib.DrawText($"{e.Name}/{e.Type}/{e.Id}", (int)e.Position.X, (int)e.Position.Y - 16, 12, col);
         }
 
         Raylib.DrawCircle((int)player.Position.X, (int)player.Position.Y, 4, Color.SkyBlue);
