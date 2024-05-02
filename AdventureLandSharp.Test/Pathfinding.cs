@@ -114,4 +114,15 @@ public class Pathfinding {
         Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
         Assert.IsTrue(path.Any());
     }
+
+    [TestMethod]
+    public void FindRoute_OffGrid3() {
+        Map main = InitWorld.World.GetMap("main");
+        MapLocation start = new(main, new(-88, -144));
+        MapLocation end = new(main, new(-89, -165));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
 }

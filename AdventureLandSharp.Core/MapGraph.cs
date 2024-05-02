@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Numerics;
 using AdventureLandSharp.Core.Util;
 
@@ -30,7 +31,7 @@ public readonly record struct MapGraphEdgeIntraMap(MapLocation Source, MapLocati
 
 public readonly record struct MapGraphEdgeTeleport(MapLocation Source, MapLocation Dest) : IMapGraphEdge {
     public override readonly string ToString() => $"Teleporting from {Source} to {Dest}.";
-    public float Cost => 10;
+    public float Cost => 50;
 }
 
 public class MapGraph {
@@ -113,17 +114,34 @@ public class MapGraph {
             .OrderBy(x => goal.Location.SimpleDist(x.Location))
             .First();
 
-        // Generate a path from start to rampOn, and from rampOff to goal.
-        // Note that they will be null if these vertices are the same as the start or goal (e.g. already in graph).
-        MapGraphEdgeIntraMap? startToRampOn = start.Map.FindPath(start.Location, rampOn.Location, settings);
-        MapGraphEdgeIntraMap? rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
+        MapGraphEdgeIntraMap? directPath = null;
+        bool needsRamp = true;
 
-        // In the event that this is a direct path (same map), try generating a path directly.
-        // This will prevent us from bouncing between vertices.
-        // Note that we still want to run Dijkstra's to look for cool shortcuts.
-        MapGraphEdgeIntraMap? directPath = start.Map == goal.Map ?
-            start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 512 }) :
-            null;
+        if (start.Map == goal.Map) {
+            // In the event that this is a direct path (same map), try generating a path directly.
+            // This will prevent us from bouncing between vertices.
+            // Note that we still want to run Dijkstra's to look for cool shortcuts.
+            directPath = start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 512 });
+
+            // Only trigger ramp generation if using the ramp is likely to be cheaper than the direct path.
+            // This is because if it isn't, it's very unlikely to be useful, and costs a lot of time.
+            // There are niche cases where it is useful, but they are few and far between.
+            float estimatedDistanceForRamp = start.Location.SimpleDist(rampOn.Location) + rampOn.Location.SimpleDist(goal.Location);
+            needsRamp = !directPath.HasValue || estimatedDistanceForRamp < directPath.Value.Cost * MapGrid.CellSize;
+        }
+
+        MapGraphEdgeIntraMap? startToRampOn = null;
+        MapGraphEdgeIntraMap? rampOffToGoal = null;
+
+        if (needsRamp) {
+            // We generate a path from start to rampOn, and from rampOff to goal.
+            // Note that they will be null if these vertices are the same as the start or goal (e.g. already in graph).
+            startToRampOn = start.Map.FindPath(start.Location, rampOn.Location, settings);
+            rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
+        }
+
+        Debug.Assert(directPath.HasValue || startToRampOn.HasValue || _edges.ContainsKey(start), "No connection to the start.");
+        Debug.Assert(directPath.HasValue || rampOffToGoal.HasValue || _edges.ContainsKey(goal), "No connection to the goal.");
 
         dist[start] = 0;
         Q.Enqueue(start, 0);

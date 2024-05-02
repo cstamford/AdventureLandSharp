@@ -113,7 +113,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
     }
 
     private static List<Vector2> SmoothedWorldPath(IReadOnlyList<Vector2> path, int divisions) {
-        if (path.Count < 2) {
+        if (path.Count < 3) {
             return [.. path];
         }
 
@@ -155,7 +155,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
 
 public static class Vector2Extensions {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Equivalent(this Vector2 a, Vector2 b) => a.Equivalent(b, MapGrid.CellWorldEpsilon/2);
+    public static bool Equivalent(this Vector2 a, Vector2 b) => a.Equivalent(b, MapGrid.CellWorldEpsilon);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Equivalent(this Vector2 a, Vector2 b, float epsilon) => a.SimpleDist(b) <= epsilon;

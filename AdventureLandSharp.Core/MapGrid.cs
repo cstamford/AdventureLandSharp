@@ -166,9 +166,9 @@ public class MapGrid {
         }
 
         if (dict.Get(goal, out _)) {
-            List<MapGridCell> path = [];
-            MapGridCell current = goal;
+            List<MapGridCell> path = [goal];
 
+            MapGridCell current = goal;
             while (dict.Get(current, out (float _, MapGridCell Cell) cur) && cur.Cell != current) {
                 path.Add(cur.Cell);
                 current = cur.Cell;

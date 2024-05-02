@@ -11,7 +11,9 @@ public class Socket : IDisposable {
 
     public event Action<string, object>? OnEmit;
     public event Action<string, object>? OnRecv;
+
     public event Action<Inbound.PartyRequestData>? OnPartyRequest;
+    public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
 
     public LocalPlayer Player => _player;
     public IEnumerable<Entity> Entities => _entities.Values;
@@ -223,6 +225,10 @@ public class Socket : IDisposable {
         }
     }
 
+    private void Recv(Inbound.MagiportRequestData evt) {
+        OnMagiportRequest?.Invoke(evt);
+    }
+
     private void Recv(Inbound.NewMapData evt) {
         _player.On(evt);
         Recv(evt.Entities);
@@ -284,7 +290,7 @@ public class Socket : IDisposable {
         _lastTick = now;
 
         _player.Tick(dt);
-    
+
         foreach (Entity e in _entities.Values) {
             e.Tick(dt);
         }
@@ -302,7 +308,8 @@ public class Socket : IDisposable {
                 Y: _player.Position.Y,
                 TargetX: _player.GoalPosition.X,
                 TargetY: _player.GoalPosition.Y,
-                MapId: _player.MapId));
+                MapId: _player.MapId
+            ));
 
             _player.RemoteGoalPosition = _player.GoalPosition;
             _lastNetMove = now;

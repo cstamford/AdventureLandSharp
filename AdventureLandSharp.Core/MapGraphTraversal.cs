@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
@@ -11,16 +12,16 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     public IMapGraphEdge? CurrentEdge => _edge;
 
     public void Update() {
-        if (Finished) {
-            return;
-        }
-
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
-        if (!CurrentEdgeValid || CurrentEdgeFinished) {
-            _edge = null;
+        while (!Finished && (!CurrentEdgeValid || CurrentEdgeFinished)) {
+            _edge = _edges.Dequeue();
             _edgeUpdate = now;
             Player.MovementPlan = null;
+        }
+
+        if (Finished) {
+            return;
         }
 
         _edge ??= _edges.Dequeue();
@@ -33,13 +34,14 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     
     private LocalPlayer Player => socket.Player;
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
+    private IMapGraphEdge? _edge;
+    private DateTimeOffset _edgeUpdate;
 
     private bool CurrentEdgeFinished => _edge != null && _edge switch { 
         MapGraphEdgeInterMap interMap => 
             Player.MapName == interMap.Dest.Map.Name,
         MapGraphEdgeIntraMap intraMap => 
-            Player.Position.Equivalent(intraMap.Dest.Location) || 
-            Player.Position.Equivalent(_edge.Dest.Map.FindNearestWalkable(_edge.Dest.Location)),
+            Player.Position.Equivalent(intraMap.Path[^1]) || Player.Position.Equivalent(intraMap.Dest.Location),
         MapGraphEdgeTeleport teleport => 
             Player.Position.Equivalent(teleport.Dest.Location, teleport.Dest.Map.DefaultSpawnScatter + MapGrid.CellWorldEpsilon),
         _ => true 
@@ -49,8 +51,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         (Player.MapName == _edge.Source.Map.Name || 
         (_edge is MapGraphEdgeInterMap && Player.MapName == _edge.Dest.Map.Name));
 
-    private IMapGraphEdge? _edge;
-    private DateTimeOffset _edgeUpdate;
+
 
     private DateTimeOffset NextEdgeUpdate(DateTimeOffset now) => _edge switch {
         MapGraphEdgeInterMap => now.Add(TimeSpan.FromSeconds(1.0)),
@@ -68,6 +69,9 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
                 throw new NotImplementedException($"Unknown inter-map edge type: {interMap.Type}");
             }
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
+            Debug.Assert(Player.MovementPlan == null || !Player.MovementPlan.Finished,
+                "Movement plan is done - but edge is not finished?");
+
             if (Player.MovementPlan == null) {
                 intraMap = ProcessEdge_MapTransitionDistanceSkip(intraMap);
                 intraMap = ProcessEdge_LineOfSightStartSkip(intraMap);

@@ -154,7 +154,7 @@ public static class Inbound {
     );
 
     [InboundSocketMessage("magiport")]
-    public readonly record struct MagiportData(
+    public readonly record struct MagiportRequestData(
         [property: JsonPropertyName("name")] string Name
     );
 

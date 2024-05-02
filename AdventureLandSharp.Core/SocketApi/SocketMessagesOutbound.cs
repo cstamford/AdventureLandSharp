@@ -73,6 +73,11 @@ public static class Outbound {
     [OutboundSocketMessage("leave")]
     public readonly record struct Leave;
 
+    [OutboundSocketMessage("magiport")]
+    public readonly record struct MagiportResponseData(
+        [property: JsonPropertyName("name")] string Name
+    );
+
     [OutboundSocketMessage("move")]
     public readonly record struct Move(
         [property: JsonPropertyName("x")] double X,
