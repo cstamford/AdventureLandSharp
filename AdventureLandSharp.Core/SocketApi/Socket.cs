@@ -90,15 +90,8 @@ public class Socket : IDisposable {
         };
 
         if (Log.LogLevelEnabled(LogLevel.DebugVerbose)) {
-            OnEmit += (evt, data) => {
-                string dataStr = data.ToString()!;
-                _log.DebugVerbose(["SEND"], $"{evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
-            };
-
-            OnRecv += (evt, data) => {
-                string dataStr = data.ToString()!;
-                _log.DebugVerbose(["RECV"], $"{evt} {dataStr[..Math.Min(128, dataStr.Length)]}");
-            };
+            OnEmit += (evt, data) => _log.DebugVerbose(["SEND"], $"{evt} {data}");
+            OnRecv += (evt, data) => _log.DebugVerbose(["RECV"], $"{evt} {data}");
         }
     }
 
