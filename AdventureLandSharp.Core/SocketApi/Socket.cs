@@ -7,7 +7,7 @@ using AdventureLandSharp.Core.Util;
 namespace AdventureLandSharp.Core.SocketApi;
 
 public class Socket : IDisposable {
-    public bool Connected => _connection.Connected && _player.Id != string.Empty;
+    public bool Connected => _connection.Connected && _player.Id != null;
 
     public event Action<string, object>? OnEmit;
     public event Action<string, object>? OnRecv;
@@ -55,13 +55,18 @@ public class Socket : IDisposable {
             MethodInfo? genericMethod = socketGetValueMethod.MakeGenericMethod(type);
             Debug.Assert(genericMethod != null, "Could not create generic method for GetValue.");
 
-            _connection.OnCreateSocket += () => _connection.On(name, e => LowLevelRecv(name, e, debug, genericMethod, method));
+            _connection.OnConnected += _ => _connection.On(name, e => LowLevelRecv(name, e, debug, genericMethod, method));
             handledEvents.Add(name);
         }
 
         _connection.OnCreateSocket += () => {
             _connection.On("limitdcreport", e => _log.Error($"limitdcreport: {e}"));
             _connection.On("disconnect_reason", e => _log.Error($"disconnect_reason: {e}"));
+        };
+
+        _connection.OnConnected += (e) => {
+            _log.Info($"Connected to server.");
+            _player = new LocalPlayer(e);
 
             MethodInfo? recvPlayer = typeof(Socket).GetMethod(
                 nameof(Recv_Player),
@@ -70,12 +75,7 @@ public class Socket : IDisposable {
             );
             Debug.Assert(recvPlayer != null);
             _connection.On("player", e => _recvQueue.Enqueue(("player", recvPlayer, e.GetValue<JsonElement>())));
-        };
 
-        _connection.OnConnected += (e) => {
-            _log.Info($"Connected to server.");
-            _player = new LocalPlayer(e);
-  
             if (Log.LogLevelEnabled(LogLevel.Debug)) {
                 _connection.OnAny((name, e) => {
                     if (!handledEvents.Contains(name)) {
