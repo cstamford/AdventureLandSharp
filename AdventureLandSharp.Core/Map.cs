@@ -21,6 +21,7 @@ public readonly record struct MapLocation(Map Map, Vector2 Location) : IComparab
 
     public readonly bool Equivalent(MapLocation other) => Map == other.Map && Location.Equivalent(other.Location);
     public readonly bool Equivalent(MapLocation other, float epsilon) => Map == other.Map && Location.Equivalent(other.Location, epsilon);
+    public MapLocation AlignToGrid() => this with { Location = Location.AlignToGrid(Map) };
 }
 
 public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLevelGeometry mapGeometry) {
@@ -159,6 +160,12 @@ public static class Vector2Extensions {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Equivalent(this Vector2 a, Vector2 b, float epsilon) => a.SimpleDist(b) <= epsilon;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector2 AlignToGrid(this Vector2 world, Map map) => world.Grid(map).World(map);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector2 AlignToGrid(this Vector2 world, MapGrid grid) => world.Grid(grid).World(grid);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MapGridCell Grid(this Vector2 world, Map map) => world.Grid(map.Grid);

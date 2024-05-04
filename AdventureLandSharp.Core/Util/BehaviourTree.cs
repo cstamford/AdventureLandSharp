@@ -46,15 +46,6 @@ public sealed class If(Func<bool> pred, Func<Status> fn) : INode {
     public Status Tick() => pred() ? fn() : Status.Fail;
 }
 
-// Evaluates a predicate and (conditionally) executes their child, otherwise executes their other child.
-// * If the predicate returns false, the condition returns the other child's status.
-// * If the predicate returns true, the condition returns the child's status.
-public sealed class ElseIf(Func<bool> pred, Func<Status> fn, Func<Status> otherFn) : INode {
-    public ElseIf(Func<bool> pred, INode child, INode otherChild) : this(pred, child.Tick, otherChild.Tick) { }
-    public ElseIf(Func<bool> pred, Action fn, Action otherFn) : this(pred, () => { fn(); return Status.Success; }, () => { otherFn(); return Status.Success; }) { }
-    public Status Tick() =>  pred() ? fn() : otherFn();
-}
-
 // Inverters execute their child and then invert their result.
 // * If the child returns success, the inverter returns fail.
 // * If the child returns running, the inverter returns running.

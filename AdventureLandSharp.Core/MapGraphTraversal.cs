@@ -24,14 +24,14 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             return;
         }
 
-        _edge ??= _edges.Dequeue();
+        Debug.Assert(CurrentEdgeValid);
 
-        if (CurrentEdgeValid && now >= _edgeUpdate) {
+        if (now >= _edgeUpdate) {
             ProcessEdge();
             _edgeUpdate = NextEdgeUpdate(now);
         }
     }
-    
+
     private LocalPlayer Player => socket.Player;
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
     private IMapGraphEdge? _edge;
@@ -50,8 +50,6 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private bool CurrentEdgeValid => _edge != null && 
         (Player.MapName == _edge.Source.Map.Name || 
         (_edge is MapGraphEdgeInterMap && Player.MapName == _edge.Dest.Map.Name));
-
-
 
     private DateTimeOffset NextEdgeUpdate(DateTimeOffset now) => _edge switch {
         MapGraphEdgeInterMap => now.Add(TimeSpan.FromSeconds(1.0)),
