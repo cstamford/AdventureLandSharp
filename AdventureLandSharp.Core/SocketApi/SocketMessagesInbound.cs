@@ -127,25 +127,10 @@ public static class Inbound {
     [InboundSocketMessage("hit")]
     public readonly record struct HitData(
         [property: JsonPropertyName("hid")] string OwnerId,
+        [property: JsonPropertyName("source")] string Source,
         [property: JsonPropertyName("id")] string TargetId,
-        [property: JsonPropertyName("pid")] string ProjectileId,
-        [property: JsonPropertyName("damage")] double? Damage,
-        [property: JsonPropertyName("heal")] double? Heal,
-        [property: JsonPropertyName("miss")] bool Miss,
-        [property: JsonPropertyName("evade")] bool Evade,
-        [property: JsonPropertyName("avoid")] bool Avoid,
-        [property: JsonPropertyName("x")] float? LocationX,
-        [property: JsonPropertyName("y")] float? LocationY,
-        [property: JsonPropertyName("crit")] float? Crit,
-        [property: JsonPropertyName("map")] string Map,
-        [property: JsonPropertyName("in")] string InId,
-        [property: JsonPropertyName("stacked")] List<string>? StackedIds,
-        [property: JsonPropertyName("mobbing")] double? Mobbing,
-        [property: JsonPropertyName("goldsteal")] double? GoldSteal,
-        [property: JsonPropertyName("reflect")] bool Reflect,
-        [property: JsonPropertyName("projectile")] string? ProjectileType,
-        [property: JsonPropertyName("dreturn")] double? DamageReturn,
-        [property: JsonPropertyName("source")] string HealSource
+        [property: JsonPropertyName("damage")] double Damage,
+        [property: JsonPropertyName("kill")] bool Kill
     );
 
     [InboundSocketMessage("invite")]
@@ -186,6 +171,12 @@ public static class Inbound {
         [property: JsonPropertyName("message")] string Message,
         [property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("type")] string Type
+    );
+
+    [InboundSocketMessage("skill_timeout")]
+    public readonly record struct SkillTimeoutData(
+        [property: JsonPropertyName("name")] string SkillName,
+        [property: JsonPropertyName("ms")] int MillisecondsUntilReady /* excluding latency */
     );
 
     [InboundSocketMessage("upgrade")]

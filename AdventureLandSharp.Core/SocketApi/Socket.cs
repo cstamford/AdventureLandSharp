@@ -12,8 +12,10 @@ public class Socket : IDisposable {
     public event Action<string, object>? OnEmit;
     public event Action<string, object>? OnRecv;
 
-    public event Action<Inbound.PartyRequestData>? OnPartyRequest;
+    public event Action<Inbound.HitData>? OnHit;
     public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
+    public event Action<Inbound.PartyRequestData>? OnPartyRequest;
+    public event Action<Inbound.SkillTimeoutData>? OnSkillTimeout;
 
     public LocalPlayer Player => _player;
     public IEnumerable<Entity> Entities => _entities.Values;
@@ -218,6 +220,10 @@ public class Socket : IDisposable {
         }
     }
 
+    private void Recv(Inbound.HitData evt) {
+        OnHit?.Invoke(evt);
+    }
+
     private void Recv(Inbound.MagiportRequestData evt) {
         OnMagiportRequest?.Invoke(evt);
     }
@@ -233,6 +239,10 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.PartyRequestData evt) {
         OnPartyRequest?.Invoke(evt);
+    }
+
+    private void Recv(Inbound.SkillTimeoutData evt) {
+        OnSkillTimeout?.Invoke(evt);
     }
 
     private void Recv_Player(JsonElement data) {
