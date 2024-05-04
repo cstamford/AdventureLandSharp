@@ -48,13 +48,13 @@ public static class Outbound {
 
     [OutboundSocketMessage("equip")]
     public readonly record struct Equip(
-        [property: JsonPropertyName("num")] long Slot
+        [property: JsonPropertyName("num")] long InvIdx
     );
 
     [OutboundSocketMessage("equip")]
     public readonly record struct EquipSlot(
-        [property: JsonPropertyName("num")] long Slot,
-        [property: JsonPropertyName("slot")] string SlotName
+        [property: JsonPropertyName("slot")] string SlotName,
+        [property: JsonPropertyName("num")] long InvIdx
     );
 
     [OutboundSocketMessage("heal")]
@@ -140,6 +140,11 @@ public static class Outbound {
     [OutboundSocketMessage("use")]
     public readonly record struct Use(
         [property: JsonPropertyName("item")] string Item
+    );
+
+    [OutboundSocketMessage("unequip")]
+    public readonly record struct UnequipSlot(
+        [property: JsonPropertyName("slot")] string SlotName
     );
 
     [OutboundSocketMessage("skill")]
