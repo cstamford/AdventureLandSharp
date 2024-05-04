@@ -85,45 +85,6 @@ public static class Inbound {
         [property: JsonPropertyName("B")] int? B
     );
 
-    [InboundSocketMessage("game_response")]
-    public readonly record struct GameResponseData(
-        [property: JsonPropertyName("response")] string Response,
-        [property: JsonPropertyName("place")] string? Place,
-        [property: JsonPropertyName("failed")] bool? Failed,
-        [property: JsonPropertyName("reason")] string? Reason,
-        [property: JsonPropertyName("cevent")] object? CharacterEvent,
-        [property: JsonPropertyName("event")] object? GeneralEvent,
-        [property: JsonPropertyName("home")] string? Home,
-        [property: JsonPropertyName("hours")] float? Hours,
-        [property: JsonPropertyName("upgrade")] bool? Upgrade,
-        [property: JsonPropertyName("level")] int? Level,
-        [property: JsonPropertyName("num")] int? Number,
-        [property: JsonPropertyName("stale")] bool? Stale,
-        [property: JsonPropertyName("gold")] double? Gold,
-        [property: JsonPropertyName("item")] string? Item,
-        [property: JsonPropertyName("skin")] string? Skin,
-        [property: JsonPropertyName("message")] string? Message,
-        [property: JsonPropertyName("id")] string? Id,
-        [property: JsonPropertyName("autoclose")] bool? Autoclose,
-        [property: JsonPropertyName("to")] string? To,
-        [property: JsonPropertyName("chance")] float? Chance,
-        [property: JsonPropertyName("challenger")] string? Challenger,
-        [property: JsonPropertyName("vs")] string? Vs,
-        [property: JsonPropertyName("scroll")] string? Scroll,
-        [property: JsonPropertyName("q")] int? Quantity,
-        [property: JsonPropertyName("h")] int? Have,
-        [property: JsonPropertyName("cx")] string? Cosmetic,
-        [property: JsonPropertyName("emx")] string? Emote,
-        [property: JsonPropertyName("acx")] string? ActiveCosmetic,
-        [property: JsonPropertyName("need")] string? Need,
-        [property: JsonPropertyName("conditions")] string? Conditions,
-        [property: JsonPropertyName("from")] string? From,
-        [property: JsonPropertyName("cost")] double? Cost,
-        [property: JsonPropertyName("offering")] bool? Offering,
-        [property: JsonPropertyName("check")] bool? Check,
-        [property: JsonPropertyName("flip")] bool? IsFlip
-    );
-
     [InboundSocketMessage("hit")]
     public readonly record struct HitData(
         [property: JsonPropertyName("hid")] string OwnerId,

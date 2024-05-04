@@ -31,6 +31,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
     public GameDataMap Data => mapData;
     public GameLevelGeometry Geometry => mapGeometry;
     public MapLocation DefaultSpawn => new(this, new((float)mapData.SpawnPositions[0][0], (float)mapData.SpawnPositions[0][1]));
+    public MapLocation? FishingSpot => mapName == "main" ? new(this, new(-1368, -257)) : null;
     public float DefaultSpawnScatter => mapData.SpawnPositions[0].Length >= 4 ? (float)mapData.SpawnPositions[0][3] : 0;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]

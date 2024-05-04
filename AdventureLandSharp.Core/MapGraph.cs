@@ -45,6 +45,11 @@ public class MapGraph {
                 AddVertex(new(map, new((float)spawn[0], (float)spawn[1])));
             }
 
+            // Creating a vertex for any fishing spot on the map.
+            if (map.FishingSpot.HasValue) {
+                AddVertex(map.FishingSpot.Value);
+            }
+
             // Creating a vertex for every monster spawn location on the map, as they are common destinations.
             foreach (GameDataMapMonster monster in map.Data.Monsters ?? []) {
                 foreach ((string? spawnMapName, Vector2 spawnLoc) in monster.GetSpawnLocations()) {

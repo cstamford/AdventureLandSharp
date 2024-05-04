@@ -12,6 +12,7 @@ public class Socket : IDisposable {
     public event Action<string, object>? OnEmit;
     public event Action<string, object>? OnRecv;
 
+    public event Action<JsonElement>? OnGameResponse;
     public event Action<Inbound.HitData>? OnHit;
     public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
     public event Action<Inbound.PartyRequestData>? OnPartyRequest;
@@ -77,6 +78,15 @@ public class Socket : IDisposable {
             );
             Debug.Assert(recvPlayer != null);
             _connection.On("player", e => _recvQueue.Enqueue(("player", recvPlayer, e.GetValue<JsonElement>())));
+
+
+            MethodInfo? recvGameResponse = typeof(Socket).GetMethod(
+                nameof(Recv_GameResponse),
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                [ typeof(JsonElement) ]
+            );
+            Debug.Assert(recvGameResponse != null);
+            _connection.On("game_response", e => _recvQueue.Enqueue(("game_response", recvGameResponse, e.GetValue<JsonElement>())));
 
             if (Log.LogLevelEnabled(LogLevel.Debug)) {
                 _connection.OnAny((name, e) => {
@@ -243,6 +253,10 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.SkillTimeoutData evt) {
         OnSkillTimeout?.Invoke(evt);
+    }
+
+    private void Recv_GameResponse(JsonElement data) {
+        OnGameResponse?.Invoke(data);
     }
 
     private void Recv_Player(JsonElement data) {
