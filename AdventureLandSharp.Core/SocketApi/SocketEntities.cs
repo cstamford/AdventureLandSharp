@@ -111,9 +111,19 @@ public sealed class Monster(JsonElement source, GameDataMonster monsterDef, Vect
 
 public sealed class Npc : Entity {
     public override string Name => _name;
+    public string NpcType { get; private set; }
+    public string Focus { get; private set; }
 
     public Npc(JsonElement source) : base(source) {
         _name = Id[1..];
+        NpcType = source.GetString("npc", string.Empty);
+        Focus = source.GetString("focus", string.Empty);
+    }
+
+    public override void Update(JsonElement source) {
+        base.Update(source);
+        NpcType = source.GetString("npc", NpcType);
+        Focus = source.GetString("focus", Focus);
     }
 
     private readonly string _name;

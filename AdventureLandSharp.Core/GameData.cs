@@ -12,6 +12,7 @@ public static class GameConstants {
     public const int LootDist = 400;
     public const int TradeDist = 400;
     public const int BankDist = 400;
+    public const int AuraDist = 320;
     public const int DoorDist = 112;
     public const int TransporterDist = 160;
     public const int PlayerWidth = 26;
