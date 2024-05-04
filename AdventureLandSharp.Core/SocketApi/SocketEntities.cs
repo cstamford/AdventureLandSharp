@@ -154,22 +154,10 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
 
     // This is the last GoalPosition that was sent to the server.
-    public Vector2? RemoteGoalPosition { get; set;} = null;
+    public Vector2? RemoteGoalPosition { get; set; } = null;
 
     public override void Update(JsonElement source) {
-        Vector2 posBefore = Position;
         base.Update(source);
-
-        if (Vector2.Distance(posBefore, Position) < MapGrid.CellWorldEpsilon*2) {
-            // If the difference between local and remote position is small, ignore it - the reason we do this is because
-            // latency will always report a position ebhind the player, and we don't want to keep correcting it.
-            Position = posBefore;
-        } else {
-            // If the difference is big, we will keep the update. In addition, delete the movement plan to force
-            // user code to generate a new one. This is very important to avoid the player getting jailed.
-            MovementPlan = null;
-        }
-
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
         Bank = ReadPlayerBank(source);
