@@ -142,13 +142,13 @@ public class Player(JsonElement source) : Entity(source) {
 public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public string MapName { get; private set; } = source.GetString("map");
     public long MapId { get; private set; } = source.GetLong("m");
+    public float ExtraRange { get; private set; } = source.GetFloat("xrange", 0);
 
     public PlayerInventory Inventory { get; private set; } = source.Deserialize<PlayerInventory>();
     public PlayerEquipment Equipment { get; private set; } = source.GetProperty("slots").Deserialize<PlayerEquipment>();
     public PlayerBank? Bank { get; private set; } = ReadPlayerBank(source);
 
     public override float AttackRange => base.AttackRange + ExtraRange;
-    public float ExtraRange { get; private set; } = source.GetFloat("xrange", 0);
 
     // This is the position that the player is currently moving towards.
     public Vector2 GoalPosition => MovementPlan?.Goal ?? Position;
@@ -158,10 +158,12 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
 
     public override void Update(JsonElement source) {
         base.Update(source);
+        MapName = source.GetString("map", MapName);
+        MapId = source.GetLong("m", MapId);
+        ExtraRange = source.GetFloat("xrange", ExtraRange);
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
         Bank = ReadPlayerBank(source);
-        ExtraRange = source.GetFloat("xrange", ExtraRange);
         GoingPosition = null; // we handle this locally, and always ignore remote
     }
 
