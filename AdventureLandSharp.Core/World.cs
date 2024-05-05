@@ -33,9 +33,9 @@ public class World {
     public MapGraph MapsGraph => _mapsGraph;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGridPathSettings? settings = null) {
+    public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGridPathSettings? settings = null, bool permitTeleport = true) {
         settings ??= new();
-        List<IMapGraphEdge> edges = _mapsGraph.InterMap_Djikstra(start, goal, settings.Value);
+        List<IMapGraphEdge> edges = _mapsGraph.InterMap_Djikstra(start, goal, permitTeleport, settings.Value);
         MergeAdjacentIntraMapEdgesInPlace(edges, settings.Value);
         return edges;
     }

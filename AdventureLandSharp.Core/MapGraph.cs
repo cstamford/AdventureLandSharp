@@ -97,7 +97,7 @@ public class MapGraph {
         };
     }
 
-    public List<IMapGraphEdge> InterMap_Djikstra(MapLocation start, MapLocation goal, MapGridPathSettings settings) {
+    public List<IMapGraphEdge> InterMap_Djikstra(MapLocation start, MapLocation goal, bool permitTeleport, MapGridPathSettings settings) {
         PriorityQueue<MapLocation, float> Q = new();
         Dictionary<MapLocation, float> dist = [];
         Dictionary<MapLocation, IMapGraphEdge> prev = [];
@@ -156,7 +156,7 @@ public class MapGraph {
                 u == start ? startToRampOn : null,
                 u == start ? directPath : null,
                 u == rampOff ? rampOffToGoal : null,
-                new MapGraphEdgeTeleport(u, u.Map.DefaultSpawn) // note: we can always teleport back to the default spawn
+                permitTeleport ? new MapGraphEdgeTeleport(u, u.Map.DefaultSpawn) : null
             ];
 
             foreach (IMapGraphEdge? edge in specialEdges.Where(x => x != null)) {

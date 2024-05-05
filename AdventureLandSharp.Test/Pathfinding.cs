@@ -150,4 +150,18 @@ public class Pathfinding {
             Assert.Fail("Expected exception");
         } catch { }
     }
+
+    [TestMethod]
+    public void FindRoute_NoTeleportVsTeleport() {
+        Map main = InitWorld.World.GetMap("main");
+        Map halloween = InitWorld.World.GetMap("halloween");
+        MapLocation start = new(main, new(1604, -532));
+        MapLocation end = new(halloween, new(8, 630));
+        
+        IEnumerable<IMapGraphEdge> pathWithTp = InitWorld.World.FindRoute(start, end, settings: null, permitTeleport: true);
+        IEnumerable<IMapGraphEdge> pathWithoutTp = InitWorld.World.FindRoute(start, end, settings: null, permitTeleport: false);
+
+        Assert.IsTrue(pathWithTp.Any(x => x is MapGraphEdgeTeleport));
+        Assert.IsFalse(pathWithoutTp.Any(x => x is MapGraphEdgeTeleport));
+    }
 }
