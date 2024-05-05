@@ -26,7 +26,7 @@ public readonly record struct MapGraphEdgeInterMap(MapLocation Source, MapLocati
 }
 
 public readonly record struct MapGraphEdgeIntraMap(MapLocation Source, MapLocation Dest, List<Vector2> Path, float Cost) : IMapGraphEdge {
-    public override readonly string ToString() => $"Traversing {Source.Map.Name} from {Source.Location} to {Dest.Location} with cost {Cost}.";
+    public override readonly string ToString() => $"Traversing {Source.Map.Name} from {Source.Position} to {Dest.Position} with cost {Cost}.";
 }
 
 public readonly record struct MapGraphEdgeTeleport(MapLocation Source, MapLocation Dest) : IMapGraphEdge {
@@ -84,7 +84,7 @@ public class MapGraph {
             // Creating an edge between each pair of vertices.
             Parallel.ForEach(vertices, u => {
                 Parallel.ForEach(vertices.Where(v => v != u && v != v.Map.DefaultSpawn), v => {
-                    MapGraphEdgeIntraMap? edge = map.FindPath(u.Location, v.Location);
+                    MapGraphEdgeIntraMap? edge = map.FindPath(u.Position, v.Position);
                     if (edge?.Cost > 0) {
                         edges.Add(edge!);
                     }
@@ -106,17 +106,17 @@ public class MapGraph {
         // This prevents bouncing backwards if the nearest vertex is behind us, and then forwards again.
         IEnumerable<MapLocation> rampOnCandidates = _vertices
             .Where(x => x.Map == start.Map)
-            .OrderBy(x => start.Location.SimpleDist(x.Location));
+            .OrderBy(x => start.Position.SimpleDist(x.Position));
 
         // Fall back to the closest vertex if we can't find one that is towards the goal.
         MapLocation rampOn = rampOnCandidates
-            .FirstOrNull(x => Vector2.Dot(start.Location - x.Location, start.Location - goal.Location) > 0) 
+            .FirstOrNull(x => Vector2.Dot(start.Position - x.Position, start.Position - goal.Position) > 0) 
             ?? rampOnCandidates.First();
 
         // Get the nearest vertex to the end.
         MapLocation rampOff = _vertices
             .Where(x => x.Map == goal.Map)
-            .OrderBy(x => goal.Location.SimpleDist(x.Location))
+            .OrderBy(x => goal.Position.SimpleDist(x.Position))
             .First();
 
         MapGraphEdgeIntraMap? directPath = null;
@@ -126,12 +126,12 @@ public class MapGraph {
             // In the event that this is a direct path (same map), try generating a path directly.
             // This will prevent us from bouncing between vertices.
             // Note that we still want to run Dijkstra's to look for cool shortcuts.
-            directPath = start.Map.FindPath(start.Location, goal.Location, settings with { MaxCost = 512 });
+            directPath = start.Map.FindPath(start.Position, goal.Position, settings with { MaxCost = 512 });
 
             // Only trigger ramp generation if using the ramp is likely to be cheaper than the direct path.
             // This is because if it isn't, it's very unlikely to be useful, and costs a lot of time.
             // There are niche cases where it is useful, but they are few and far between.
-            float estimatedDistanceForRamp = start.Location.SimpleDist(rampOn.Location) + rampOn.Location.SimpleDist(goal.Location);
+            float estimatedDistanceForRamp = start.Position.SimpleDist(rampOn.Position) + rampOn.Position.SimpleDist(goal.Position);
             needsRamp = !directPath.HasValue || estimatedDistanceForRamp < directPath.Value.Cost * MapGrid.CellSize;
         }
 
@@ -141,8 +141,8 @@ public class MapGraph {
         if (needsRamp) {
             // We generate a path from start to rampOn, and from rampOff to goal.
             // Note that they will be null if these vertices are the same as the start or goal (e.g. already in graph).
-            startToRampOn = start.Map.FindPath(start.Location, rampOn.Location, settings);
-            rampOffToGoal = goal.Map.FindPath(rampOff.Location, goal.Location, settings);
+            startToRampOn = start.Map.FindPath(start.Position, rampOn.Position, settings);
+            rampOffToGoal = goal.Map.FindPath(rampOff.Position, goal.Position, settings);
         }
 
         Debug.Assert(directPath.HasValue || startToRampOn.HasValue || _edges.ContainsKey(start), "No connection to the start.");

@@ -82,8 +82,8 @@ public class World {
                 Debug.Assert(mergeStart.Map == mergeGoal.Map);
 
                 MapGraphEdgeIntraMap? mergedEdge = mergeStart.Map.FindPath(
-                    mergeStart.Location,
-                    mergeGoal.Location,
+                    mergeStart.Position,
+                    mergeGoal.Position,
                     settings with { MaxCost = 64 }
                 );
 

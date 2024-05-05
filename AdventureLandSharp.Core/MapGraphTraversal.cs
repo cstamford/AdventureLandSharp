@@ -43,9 +43,9 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         MapGraphEdgeInterMap interMap => 
             Player.MapName == interMap.Dest.Map.Name,
         MapGraphEdgeIntraMap intraMap => 
-            Player.Position.Equivalent(intraMap.Path[^1]) || Player.Position.Equivalent(intraMap.Dest.Location),
+            Player.Position.Equivalent(intraMap.Path[^1]) || Player.Position.Equivalent(intraMap.Dest.Position),
         MapGraphEdgeTeleport teleport => 
-            Player.Position.Equivalent(teleport.Dest.Location, teleport.Dest.Map.DefaultSpawnScatter + MapGrid.CellWorldEpsilon),
+            Player.Position.Equivalent(teleport.Dest.Position, teleport.Dest.Map.DefaultSpawnScatter + MapGrid.CellWorldEpsilon),
         _ => true 
     };
 
@@ -99,7 +99,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             };
 
             if (cuttableDistance > 0) {
-                int cutIdx = edge.Path.FindIndex(x => x.SimpleDist(nextEdgeInter.Source.Location) < cuttableDistance);
+                int cutIdx = edge.Path.FindIndex(x => x.SimpleDist(nextEdgeInter.Source.Position) < cuttableDistance);
                 int cutLength = edge.Path.Count - cutIdx - 1;
 
                 if (cutLength > 0) {
@@ -107,7 +107,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
                 }
 
                 Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
-                return edge with { Dest = edge.Dest with { Location = newLocation } };
+                return edge with { Dest = edge.Dest with { Position = newLocation } };
             }
         }
 
@@ -140,7 +140,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 
         if (lastIndexWithLOS > 0) {
             edge.Path.RemoveRange(0, lastIndexWithLOS);
-            return edge with { Source = edge.Source with { Location = edge.Path[0] } };
+            return edge with { Source = edge.Source with { Position = edge.Path[0] } };
         }
 
         return edge;
@@ -156,9 +156,7 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
 
     public bool Update(double dt, double speed) { 
         bool finished = _pathMovementPlan.Update(dt, speed);
-        _clickAheadPoint = Path.Count > 1 && OriginalGoal != Position ? 
-            CalculateClickAheadPoint(OriginalGoal, (float)speed) :
-            OriginalGoal;
+        _clickAheadPoint = Position.SimpleDist(OriginalGoal) > MapGrid.CellWorldEpsilon ? CalculateClickAheadPoint(OriginalGoal, (float)speed) : OriginalGoal;
         return finished;
     }
 

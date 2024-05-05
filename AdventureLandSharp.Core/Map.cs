@@ -5,23 +5,23 @@ using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Core;
 
-public readonly record struct MapLocation(Map Map, Vector2 Location) : IComparable<MapLocation> {
+public readonly record struct MapLocation(Map Map, Vector2 Position) : IComparable<MapLocation> {
     public readonly int CompareTo(MapLocation other) {
         int mapComparison = Map.Name.CompareTo(other.Map.Name);
         if (mapComparison != 0) return mapComparison;
 
-        int xComparison = Location.X.CompareTo(other.Location.X);
+        int xComparison = Position.X.CompareTo(other.Position.X);
         if (xComparison != 0) return xComparison;
 
-        return Location.Y.CompareTo(other.Location.Y);
+        return Position.Y.CompareTo(other.Position.Y);
     }
 
-    public readonly override int GetHashCode() => HashCode.Combine(Map.Name, Location.X, Location.Y);
-    public readonly override string ToString() => $"{Map.Name} {Location}";
+    public readonly override int GetHashCode() => HashCode.Combine(Map.Name, Position.X, Position.Y);
+    public readonly override string ToString() => $"{Map.Name} {Position}";
 
-    public readonly bool Equivalent(MapLocation other) => Map == other.Map && Location.Equivalent(other.Location);
-    public readonly bool Equivalent(MapLocation other, float epsilon) => Map == other.Map && Location.Equivalent(other.Location, epsilon);
-    public MapLocation AlignToGrid() => this with { Location = Location.AlignToGrid(Map) };
+    public readonly bool Equivalent(MapLocation other) => Map == other.Map && Position.Equivalent(other.Position);
+    public readonly bool Equivalent(MapLocation other, float epsilon) => Map == other.Map && Position.Equivalent(other.Position, epsilon);
+    public MapLocation AlignToGrid() => this with { Position = Position.AlignToGrid(Map) };
 }
 
 public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLevelGeometry mapGeometry) {
@@ -210,5 +210,5 @@ public static class MapGridCellExtensions {
 
 public static class MapLocationExtensions {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static MapGridCell Grid(this MapLocation loc) => loc.Location.Grid(loc.Map);
+    public static MapGridCell Grid(this MapLocation loc) => loc.Position.Grid(loc.Map);
 }

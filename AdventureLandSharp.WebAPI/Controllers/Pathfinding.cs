@@ -68,9 +68,6 @@ public class PathfindingController(World world) : ControllerBase {
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult Path(PathRequest req) {
         if (world.TryGetMap(req.Source.Map, out Map sourceMap) && world.TryGetMap(req.Dest.Map, out Map destMap)) {
-            MapGridCell startLocation = req.Source.Location.Grid(sourceMap);
-            MapGridCell endLocation = req.Dest.Location.Grid(destMap);
-
             MapLocation start = new(sourceMap, req.Source.Location);
             MapLocation end = new(destMap, req.Dest.Location);
 
@@ -80,18 +77,18 @@ public class PathfindingController(World world) : ControllerBase {
                 Ok(path.Select(x => x.ToString())) :
                 Ok(path.Select<IMapGraphEdge, IPathResponseStep>(x => x switch {
                     MapGraphEdgeInterMap edge => new PathResponseInterMapStep(
-                        new(edge.Source.Map.Name, edge.Source.Location),
-                        new(edge.Dest.Map.Name, edge.Dest.Location),
+                        new(edge.Source.Map.Name, edge.Source.Position),
+                        new(edge.Dest.Map.Name, edge.Dest.Position),
                         edge.Type
                     ),
                     MapGraphEdgeIntraMap edge => new PathResponseIntraMapStep(
-                        new(edge.Source.Map.Name, edge.Source.Location),
-                        new(edge.Dest.Map.Name, edge.Dest.Location),
+                        new(edge.Source.Map.Name, edge.Source.Position),
+                        new(edge.Dest.Map.Name, edge.Dest.Position),
                         [.. edge.Path]
                     ),
                     MapGraphEdgeTeleport edge => new PathResponseTeleportStep(
-                        new(edge.Source.Map.Name, edge.Source.Location),
-                        new(edge.Dest.Map.Name, edge.Dest.Location)
+                        new(edge.Source.Map.Name, edge.Source.Position),
+                        new(edge.Dest.Map.Name, edge.Dest.Position)
                     ),
                     _ => throw new NotImplementedException()
                 }));

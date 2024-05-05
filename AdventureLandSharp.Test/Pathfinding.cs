@@ -78,7 +78,7 @@ public class Pathfinding {
     [TestMethod]
     public void FindPath_SameSpot() {
         Map main = InitWorld.World.GetMap("main");
-        IMapGraphEdge? path = main.FindPath(main.DefaultSpawn.Location, main.DefaultSpawn.Location);
+        IMapGraphEdge? path = main.FindPath(main.DefaultSpawn.Position, main.DefaultSpawn.Position);
 
         Assert.IsTrue(path == null);
     }
