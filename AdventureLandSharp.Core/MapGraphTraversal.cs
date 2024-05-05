@@ -100,10 +100,14 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 
             if (cuttableDistance > 0) {
                 int cutIdx = edge.Path.FindIndex(x => x.SimpleDist(nextEdgeInter.Source.Position) < cuttableDistance);
-                int cutLength = edge.Path.Count - cutIdx - 1;
 
-                if (cutLength > 0) {
-                    edge.Path.RemoveRange(cutIdx + 1, cutLength);
+                if (cutIdx != -1) {
+                    int cutIdxOneAfter = cutIdx + 1;
+                    int cutLength = edge.Path.Count - cutIdxOneAfter;
+
+                    if (cutLength > 0) {
+                        edge.Path.RemoveRange(cutIdxOneAfter, cutLength);
+                    }
                 }
 
                 Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
