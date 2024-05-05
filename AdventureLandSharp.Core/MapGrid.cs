@@ -65,7 +65,7 @@ public readonly record struct MapGridPathSettings(
     int? MaxSteps = null,
     float? MaxCost = null)
 {
-    public MapGridPathSettings() : this(MapGridHeuristic.Manhattan, null, null) 
+    public MapGridPathSettings() : this(MapGridHeuristic.Euclidean, null, null) 
     { }
 }
 
@@ -182,12 +182,11 @@ public class MapGrid {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public MapGridCell FindNearestWalkable(MapGridCell start, MapGridPathSettings? settings = null) {
+    public MapGridCell FindNearestWalkable(MapGridCell start, MapGridPathSettings settings) {
         if (IsWalkable(start)) {
             return start;
         }
 
-        MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
         QuadMap<MapGridCell, (float, MapGridCell)> dict = _dictPool.Value!;
         FastPriorityQueue<MapGridCell> Q = _queuePool.Value!;
 
@@ -197,15 +196,23 @@ public class MapGrid {
         Q.Clear();
         Q.Enqueue(start, 0);
 
-        while (Q.TryDequeue(out MapGridCell pos, out _)) {
+        for (int steps = 0; Q.TryDequeue(out MapGridCell pos, out float cost); ++steps) {
             if (IsWalkable(pos)) {
                 return pos;
+            }
+
+            if (steps > settings.MaxSteps) {
+                break;
+            }
+
+            if (cost > settings.MaxCost) {
+                break;
             }
 
             foreach (MapGridCell offset in _neighbourOffsets) {
                 MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
                 if (!dict.Contains(neighbour)) {
-                    Q.Enqueue(neighbour, neighbour.Cost(start, heuristic));
+                    Q.Enqueue(neighbour, neighbour.Cost(start, settings.Heuristic));
                     dict.Emplace(neighbour, default);
                 }
             }

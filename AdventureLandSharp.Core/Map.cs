@@ -64,7 +64,8 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
         return CopyEdgeWithRamp(edge, start, goal);
     }
 
-    public Vector2 FindNearestWalkable(Vector2 world) => _grid.FindNearestWalkable(world.Grid(this)).World(this);
+    public Vector2 FindNearestWalkable(Vector2 world) => _grid.FindNearestWalkable(
+        world.Grid(this), new MapGridPathSettings() with { MaxSteps = 512 }).World(this);
 
     private readonly MapGrid _grid = new(mapData, mapGeometry);
     private readonly MapConnections _connections = new(mapName, gameData, mapData);

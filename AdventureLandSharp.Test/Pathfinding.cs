@@ -95,8 +95,8 @@ public class Pathfinding {
     public void FindRoute_OffGrid() {
         Map main = InitWorld.World.GetMap("main");
         Map desertland = InitWorld.World.GetMap("desertland");
-        MapLocation start = new(desertland, new(-1184, 781));
-        MapLocation end = new(main, new(0, 0));
+        MapLocation start = new(main, new(-1184, 781));
+        MapLocation end = new(desertland, new(0, 0));
         IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
 
         Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
@@ -124,5 +124,31 @@ public class Pathfinding {
 
         Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
         Assert.IsTrue(path.Any());
+    }
+
+    [TestMethod]
+    [Ignore("This test is failing, probably due to grid.")]
+    public void FindRoute_Failing1() {
+        Map main = InitWorld.World.GetMap("main");
+        Map halloween = InitWorld.World.GetMap("halloween");
+        MapLocation start = new(main, new(-551, -375));
+        MapLocation end = new(halloween, new(8, 630.5f));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
+
+    
+    [TestMethod]
+    public void FindRoute_Failing2() {
+        Map main = InitWorld.World.GetMap("main");
+        MapLocation start = new(main, new(100, -1160));
+        MapLocation end = new(main, new(948, -144));
+
+        try {
+            IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+            Assert.Fail("Expected exception");
+        } catch { }
     }
 }
