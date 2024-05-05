@@ -10,7 +10,10 @@ namespace AdventureLandSharp.Example;
 
 // Implements a basic character that can attack enemies, consume potions, and path through the world.
 public class BasicCharacter : ICharacter {
+    public Socket Socket => _socket;
+    public CharacterClass Class => _cls;
     public LocalPlayer Entity => _socket.Player;
+    public MapLocation EntityLocation => new(_world.GetMap(Entity.MapName), Entity.Position);
 
     public BasicCharacter(World world, Socket socket, CharacterClass cls) {
         _cls = cls;
@@ -31,11 +34,10 @@ public class BasicCharacter : ICharacter {
             new If(() => _traversal.CurrentEdge is MapGraphEdgeTeleport, new Success()),
 
             // If we need to drink a potion, do it.
-            ConsumePotions()
+            ConsumePotions(),
 
             // If we have any enemies within attack range, bash them.
-            // Note: Disabled for now, as BasicCharacter is mostly used as a movement test.
-            //new Do(AttackNearbyEnemy)
+            new Do(AttackNearbyEnemy)
         );
 
         _btMovement = new Selector(
@@ -63,8 +65,8 @@ public class BasicCharacter : ICharacter {
     private bool _running = true;
 
     private MapGraphTraversal _traversal;
-    private readonly INode _btAbility;
-    private readonly INode _btMovement;
+    private readonly Selector _btAbility;
+    private readonly Selector _btMovement;
 
     private readonly Cooldown _attackCd = new(default);
 

@@ -7,7 +7,8 @@ namespace AdventureLandSharp.Interfaces;
 public readonly record struct SessionPlan(
     ConnectionSettings Connection,
     SessionFactory SessionFactory,
-    CharacterFactory CharacterFactory
+    CharacterFactory CharacterFactory,
+    GuiFactory? GuiFactory
 );
 
 public interface ISessionCoordinator {

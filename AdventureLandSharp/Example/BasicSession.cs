@@ -8,12 +8,7 @@ namespace AdventureLandSharp.Example;
 
 // Implements a basic session that will connect to the server and run a character.
 // It will handle reconnecting if the connection is lost.
-public class BasicSession(
-    World world,
-    ConnectionSettings settings,
-    CharacterFactory characterFactory,
-    bool withGui) : ISession
-{
+public class BasicSession(World world, ConnectionSettings settings, CharacterFactory characterFactory, GuiFactory? guiFactory) : ISession {
     public event Action<Socket, ICharacter>? OnInit;
     public event Action<Socket, ICharacter>? OnTick;
     public event Action<Socket, ICharacter>? OnFree;
@@ -24,13 +19,13 @@ public class BasicSession(
         while (!_disposed) {
             _socket = new(_world.Data, _settings);
 
-            if (withGui) {
-                _gui = new(_world, _socket);
-            }
-
             while (!_disposed && !_socket.Connected) {
                 _socket.Update();
                 Thread.Yield();
+            }
+
+            if (_disposed) {
+                break;
             }
 
             try {   
@@ -47,15 +42,11 @@ public class BasicSession(
         CleanUpAfterRun();
     }
 
-    public void Dispose() {
-        _disposed = true;
-    }
-
     protected readonly World _world = world;
     protected readonly ConnectionSettings _settings = settings;
     protected readonly Logger _log = new(settings.Character.Name, "SESSION");
     protected Socket? _socket;
-    protected BasicSessionGui? _gui;
+    protected ISessionGui? _gui;
     protected bool _disposed = false;
 
     private void DoOneRun() {
@@ -63,6 +54,7 @@ public class BasicSession(
 
         CharacterClass cls = Enum.Parse<CharacterClass>(_settings.Character.Type, ignoreCase: true);
         ICharacter character = characterFactory(_world, _socket, cls);
+        _gui = guiFactory?.Invoke(_world, character);
 
         OnInit?.Invoke(_socket, character);
 
@@ -70,11 +62,11 @@ public class BasicSession(
             _socket.Update();
 
             if (_gui != null && !_gui.Update()) {
-                return;
+                break;
             }
 
             if (!character.Update()) {
-                return;
+                break;
             }
 
             OnTick?.Invoke(_socket, character);
@@ -89,5 +81,14 @@ public class BasicSession(
         _socket = null;
         _gui?.Dispose();
         _gui = null;
+    }
+
+    public void Dispose() {
+        DisposeInternal();
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void DisposeInternal() { 
+        _disposed = true;
     }
 }

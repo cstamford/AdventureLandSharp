@@ -14,7 +14,10 @@ public enum CharacterClass {
 };
 
 public interface ICharacter {
+    public Socket Socket { get; }
+    public CharacterClass Class { get; }
     public LocalPlayer Entity { get; }
+    public MapLocation EntityLocation { get; }
     public bool Update();
 }
 

@@ -21,9 +21,10 @@ ISessionCoordinator coordinator = DependencyResolver.SessionCoordinator()(world,
 List<RunningSession> sessions = [];
 
 while (true) {
+    IEnumerable<SessionPlan> plans = coordinator.Plans;
     IEnumerable<RunningSession> staleSessions = sessions.Where(x => 
-        x.SessionTask.IsCompleted ||
-        !coordinator.Plans.Any(y => x.Session.Settings == y.Connection));
+        x.SessionTask.IsCompleted || 
+        !plans.Any(y => x.Session.Settings == y.Connection));
 
     foreach (RunningSession staleSession in staleSessions) {
         staleSession.Session.Dispose();
@@ -32,13 +33,27 @@ while (true) {
 
     sessions.RemoveAll(x => staleSessions.Contains(x));
 
-    IEnumerable<SessionPlan> freshSessions = coordinator.Plans
-        .Where(x => !sessions.Any(y => y.Session.Settings == x.Connection));
+    IEnumerable<SessionPlan> freshSessions = plans.Where(x => 
+        !sessions.Any(y => y.Session.Settings == x.Connection));
 
     foreach (SessionPlan plan in freshSessions) {
-        ISession session = plan.SessionFactory(world, plan.Connection, plan.CharacterFactory);
-        Task sessionTask = Task.Run(session.EnterUpdateLoop);
-        sessions.Add(new RunningSession(session, sessionTask));
+        ISession session = plan.SessionFactory(
+            world,
+            plan.Connection,
+            plan.CharacterFactory,
+            plan.GuiFactory
+        );
+
+        sessions.Add(new RunningSession(session, Task.Run(() => {
+            string? oldThreadName = Thread.CurrentThread.Name;
+
+            try {
+                Thread.CurrentThread.Name = $"{plan.Connection.Character.Name} Update";
+                session.EnterUpdateLoop();
+            } finally {
+                Thread.CurrentThread.Name = oldThreadName;
+            }
+        })));
     }
 
     await Task.WhenAny([

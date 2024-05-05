@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.HttpApi;
 using AdventureLandSharp.Core.SocketApi;
@@ -5,52 +6,53 @@ using AdventureLandSharp.Interfaces;
 
 namespace AdventureLandSharp.Example;
 
-// Implements a session coordinator that connects to the server with the highest level character.
-// It will change the selected character every minute, cycling through the list of characters.
+// Implements an example session coordinator that connects to the server with three random characters. It will change the selected characters every minute.
 public class BasicSessionCoordinator(
     World world,
     ApiAuthState authState,
     ServersAndCharactersResponse serverState) : ISessionCoordinator
 {
-    public IEnumerable<SessionPlan> Plans => [NextPlan()];
-
-    private DateTimeOffset _lastCharacterChange = DateTimeOffset.UtcNow;
-    private static readonly TimeSpan _characterChangeInterval = TimeSpan.FromMinutes(1);
-    private int _characterIdx = 0;
-
-    private SessionPlan NextPlan() => new(
-        Connection: NextCharacter(),
-        SessionFactory: (world, settings, characterFactory) => new BasicSession(world, settings, characterFactory, withGui: true),
-        CharacterFactory: (world, settings, cls) => new BasicCharacter(world, settings, cls)
-    );
-
-    private ConnectionSettings NextCharacter() {
-        const string serverRegion = "US";
-        const string serverName = "III";
-
-        List<ConnectionSettings> characters = serverState.Characters
-            .OrderByDescending(x => x.Level)
-            .Select(x => new ConnectionSettings(
-                UserId: authState.UserId,
-                AuthToken: authState.AuthToken,
-                Server: serverState.Servers.First(x => x is { Region: serverRegion, Name: serverName}),
-                Character: x))
-            .ToList();
-
-        if (DateTimeOffset.UtcNow.Subtract(_lastCharacterChange) >= _characterChangeInterval) {
-            ++_characterIdx;
-
-            if (++_characterIdx >= characters.Count) {
-                _characterIdx = 0;
-            }
-
-            _lastCharacterChange = DateTimeOffset.UtcNow;
-        }
-
-        return characters[_characterIdx];
-    }
-
     [SessionCoordinatorFactory]
     public static ISessionCoordinator Create(World world, ApiAuthState apiAuthState, ServersAndCharactersResponse api)
         => new BasicSessionCoordinator(world, apiAuthState, api);
+
+    public IEnumerable<SessionPlan> Plans => GetPlans();
+
+    private IEnumerable<SessionPlan> _plans = [];
+    private DateTimeOffset _nextPlanRefresh = DateTimeOffset.UtcNow;
+    private readonly ConcurrentDictionary<string, ICharacter> _characters = [];
+
+    private IEnumerable<SessionPlan> GetPlans() {
+        if (DateTimeOffset.UtcNow >= _nextPlanRefresh) {
+            ConnectionSettings[] characters = [..serverState.Characters
+                .OrderByDescending(x => x.Level)
+                .Select(x => new ConnectionSettings(
+                    UserId: authState.UserId,
+                    AuthToken: authState.AuthToken,
+                    Server: serverState.Servers.First(x => x is { Region: "US", Name: "III"}),
+                    Character: x))];
+
+            for (int i = 0; i < characters.Length; ++i) {
+                int j = Random.Shared.Next(i, characters.Length);
+                (characters[j], characters[i]) = (characters[i], characters[j]);
+            }
+
+            ApiCharacter guiChar = characters[0].Character;
+
+            _plans = characters.Take(3).Select(x => new SessionPlan(
+                Connection: x,
+                SessionFactory: (w, s, c, g) => new BasicSession(w, s, c, g),
+                CharacterFactory: (w, s, c) => {
+                    ICharacter character = new BasicCharacter(w, s, c);
+                    _characters[s.Player.Id] = character;
+                    return character;
+                },
+                GuiFactory: (guiChar == x.Character) ? (w, c) => new BasicCharacterGui(w, c) : null)
+            );
+
+            _nextPlanRefresh = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(5));
+        }
+
+        return _plans;
+    }
 }

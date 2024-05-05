@@ -11,6 +11,7 @@ public interface ISession : IDisposable {
 public delegate ISession SessionFactory(
     World world,
     ConnectionSettings settings,
-    CharacterFactory characterFactory
+    CharacterFactory characterFactory,
+    GuiFactory? guiFactory
 );
 
