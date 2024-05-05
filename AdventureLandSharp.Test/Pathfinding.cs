@@ -139,9 +139,8 @@ public class Pathfinding {
         Assert.IsTrue(path.Any());
     }
 
-    
     [TestMethod]
-    public void FindRoute_Failing2() {
+    public void FindRoute_InvalidGridCoords() {
         Map main = InitWorld.World.GetMap("main");
         MapLocation start = new(main, new(100, -1160));
         MapLocation end = new(main, new(948, -144));
