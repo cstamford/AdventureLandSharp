@@ -15,6 +15,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         while (!Finished && (!CurrentEdgeValid || CurrentEdgeFinished)) {
+            _log.Debug($"Progressing to next edge. CurrentEdge={CurrentEdge}, CurrentEdgeValid={CurrentEdgeValid}, CurrentEdgeFinished={CurrentEdgeFinished}.");
             _edge = _edges.Dequeue();
             _edgeUpdate = now;
             Player.MovementPlan = null;
@@ -36,6 +37,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
     private IMapGraphEdge? _edge;
     private DateTimeOffset _edgeUpdate;
+    private readonly Logger _log = new(socket.Player.Name, "MapGraphTraversal");
 
     private bool CurrentEdgeFinished => _edge != null && _edge switch { 
         MapGraphEdgeInterMap interMap => 
@@ -59,6 +61,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 
     private void ProcessEdge() {
         if (_edge is MapGraphEdgeInterMap interMap) {
+            _log.Debug($"Using {interMap.Type} to {interMap.Dest}.");
             if (interMap.Type is MapConnectionType.Door or MapConnectionType.Transporter) {
                 socket.Emit<Outbound.Transport>(new(interMap.Dest.Map.Name, interMap.DestSpawnId));
             } else if (interMap.Type is MapConnectionType.Leave) {
@@ -77,7 +80,8 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
                 _edge = intraMap;
             }
-        } else if (_edge is MapGraphEdgeTeleport) {
+        } else if (_edge is MapGraphEdgeTeleport tp) {
+            _log.Debug($"Teleporting to {tp.Dest}.");
             socket.Emit<Outbound.Town>(new());
         } else {
             throw new NotImplementedException($"Unknown edge type: {_edge}");
