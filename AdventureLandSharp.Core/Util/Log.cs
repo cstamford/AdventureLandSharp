@@ -4,6 +4,8 @@ public enum LogLevel {
     DebugVerbose,
     Debug,
     Info,
+    Alert,
+    Warn,
     Error
 }
 
@@ -24,7 +26,7 @@ public static class Log {
             _logFile = new NullStream();
             _logWriter = new(_logFile);
 
-            Error($"Failed to initialize logging: {ex}");
+            Warn($"Failed to initialize logging: {ex}");
         }
 
         Info($"Log level: {_logLevel}");
@@ -41,6 +43,22 @@ public static class Log {
         }
 
         Write(LogLevel.Error, tags, message);
+    }
+
+    public static void Warn(IEnumerable<string> tags, string message) {
+        if (_logLevel > LogLevel.Warn) {
+            return;
+        }
+
+        Write(LogLevel.Warn, tags, message);
+    }
+
+    public static void Alert(IEnumerable<string> tags, string message) {
+        if (_logLevel > LogLevel.Alert) {
+            return;
+        }
+
+        Write(LogLevel.Alert, tags, message);
     }
 
     public static void Info(IEnumerable<string> tags, string message) {
@@ -68,6 +86,8 @@ public static class Log {
     }
 
     public static void Error(string message) => Error([], message);
+    public static void Warn(string message) => Warn([], message);
+    public static void Alert(string message) => Alert([], message);
     public static void Info(string message) => Info([], message);
     public static void Debug(string message) => Debug([], message);
     public static void DebugVerbose(string message) => DebugVerbose([], message);
@@ -94,6 +114,8 @@ public static class Log {
             ConsoleColor col = verbosity switch {
                 LogLevel.DebugVerbose => ConsoleColor.DarkGray,
                 LogLevel.Debug => ConsoleColor.Gray,
+                LogLevel.Alert => ConsoleColor.Cyan,
+                LogLevel.Warn => ConsoleColor.Yellow,
                 LogLevel.Error => ConsoleColor.Red,
                 _ => ConsoleColor.White
             };
@@ -119,6 +141,10 @@ public static class Log {
 public class Logger(params string[] tags) {
     public void Error(string message) => Log.Error(tags, message);
     public void Error(IEnumerable<string> otherTags, string message) => Log.Error(tags.Concat(otherTags), message);
+    public void Warn(string message) => Log.Warn(tags, message);
+    public void Warn(IEnumerable<string> otherTags, string message) => Log.Warn(tags.Concat(otherTags), message);
+    public void Alert(string message) => Log.Alert(tags, message);
+    public void Alert(IEnumerable<string> otherTags, string message) => Log.Alert(tags.Concat(otherTags), message);
     public void Info(string message) => Log.Info(tags, message);
     public void Info(IEnumerable<string> otherTags, string message) => Log.Info(tags.Concat(otherTags), message);
     public void Debug(string message) => Log.Debug(tags, message);

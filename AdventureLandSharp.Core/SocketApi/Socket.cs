@@ -63,8 +63,8 @@ public class Socket : IDisposable {
         }
 
         _connection.OnCreateSocket += () => {
-            _connection.On("limitdcreport", e => _log.Error($"limitdcreport: {e}"));
-            _connection.On("disconnect_reason", e => _log.Error($"disconnect_reason: {e}"));
+            _connection.On("limitdcreport", e => _log.Warn($"limitdcreport: {e}"));
+            _connection.On("disconnect_reason", e => _log.Warn($"disconnect_reason: {e}"));
         };
 
         _connection.OnConnected += (e) => {
