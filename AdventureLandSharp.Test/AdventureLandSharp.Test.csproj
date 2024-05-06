@@ -21,7 +21,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AdventureLandSharp.Core\AdventureLandSharp.Core.csproj" />
-    <ProjectReference Include="..\AdventureLandSharp\AdventureLandSharp.csproj" />
   </ItemGroup>
 
 </Project>

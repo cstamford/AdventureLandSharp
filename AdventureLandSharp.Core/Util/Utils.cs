@@ -1,7 +1,6 @@
-using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.HttpApi;
 
-namespace AdventureLandSharp.Helpers;
+namespace AdventureLandSharp.Core.Util;
 
 public static class Utils {
     public const bool InDebugMode = 

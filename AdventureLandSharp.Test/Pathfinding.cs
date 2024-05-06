@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Numerics;
 using AdventureLandSharp.Core;
-using AdventureLandSharp.Helpers;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Test;
 

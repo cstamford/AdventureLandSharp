@@ -1,6 +1,6 @@
 ﻿using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.HttpApi;
-using AdventureLandSharp.Helpers;
+using AdventureLandSharp.Core.Util;
 using AdventureLandSharp.Interfaces;
 
 const string user = "dev";
