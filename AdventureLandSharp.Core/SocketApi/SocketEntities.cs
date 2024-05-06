@@ -106,7 +106,7 @@ public abstract class Entity {
 
 public sealed class Monster(JsonElement source, GameDataMonster monsterDef, Vector2 size) : Entity(source, monsterDef) {
     public GameDataMonster MonsterDef { get; } = monsterDef;
-    public override Vector2 Size => size;
+    public Vector2 VisualSize => size;
 }
 
 public sealed class Npc : Entity {
