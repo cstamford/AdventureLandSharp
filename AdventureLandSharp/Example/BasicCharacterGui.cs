@@ -177,7 +177,7 @@ public class BasicCharacterGui : ISessionGui {
     }
 }
 #else
-public class BasicCharacterGui(World world) : ISessionGui {
+public class BasicCharacterGui(World world, ICharacter character) : ISessionGui {
     public bool Update() => true;
     public void Dispose() { }
     protected virtual void Draw_1_Pre() { }
