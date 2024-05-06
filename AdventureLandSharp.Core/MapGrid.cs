@@ -281,14 +281,10 @@ public class MapGrid {
         => WorldToGrid(geo, new((float)x, (float)y));
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-    private static MapGridCell WorldToGrid(GameLevelGeometry geo, Vector2 pos) => new(
-        (int)MathF.Round((pos.X - geo.MinX) / CellSize), 
-        (int)MathF.Round((pos.Y - geo.MinY) / CellSize));
+    private static MapGridCell WorldToGrid(GameLevelGeometry geo, Vector2 pos) => new((int)((pos.X - geo.MinX) / CellSize), (int)((pos.Y - geo.MinY) / CellSize));
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-    private static Vector2 GridToWorld(GameLevelGeometry geo, MapGridCell pos) => new(
-        geo.MinX + pos.X * CellSize,
-        geo.MinY + pos.Y * CellSize);
+    private static Vector2 GridToWorld(GameLevelGeometry geo, MapGridCell pos) => new(geo.MinX + pos.X * CellSize, geo.MinY + pos.Y * CellSize);
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static MapGridCellData[,] CreateTerrain(GameDataMap map, GameLevelGeometry geo) {
