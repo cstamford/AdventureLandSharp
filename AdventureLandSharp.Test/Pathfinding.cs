@@ -157,11 +157,39 @@ public class Pathfinding {
         Map halloween = InitWorld.World.GetMap("halloween");
         MapLocation start = new(main, new(1604, -532));
         MapLocation end = new(halloween, new(8, 630));
-        
-        IEnumerable<IMapGraphEdge> pathWithTp = InitWorld.World.FindRoute(start, end, settings: null, permitTeleport: true);
-        IEnumerable<IMapGraphEdge> pathWithoutTp = InitWorld.World.FindRoute(start, end, settings: null, permitTeleport: false);
+
+        IEnumerable<IMapGraphEdge> pathWithTp = InitWorld.World.FindRoute(start, end, graphSettings: new MapGraphPathSettings() with { EnableTeleport = true });
+        IEnumerable<IMapGraphEdge> pathWithoutTp = InitWorld.World.FindRoute(start, end, graphSettings: new MapGraphPathSettings() with { EnableTeleport = false });
 
         Assert.IsTrue(pathWithTp.Any(x => x is MapGraphEdgeTeleport));
         Assert.IsFalse(pathWithoutTp.Any(x => x is MapGraphEdgeTeleport));
     }
+
+    [TestMethod]
+    public void FindRoute_GooBrawl() {
+        Map main = InitWorld.World.GetMap("main");
+        Map gooBrawl = InitWorld.World.GetMap("goobrawl");
+
+        MapGraphPathSettings settings = new MapGraphPathSettings() with { EnableEvents = [
+            (GameConstants.GooBrawlEventName, InitWorld.World.GooBrawlLocation)
+        ]};
+        IEnumerable<IMapGraphEdge> pathIn = InitWorld.World.FindRoute(main.DefaultSpawn, gooBrawl.DefaultSpawn, settings);
+        IEnumerable<IMapGraphEdge> pathOut = InitWorld.World.FindRoute(gooBrawl.DefaultSpawn, main.DefaultSpawn, settings);
+
+        Assert.IsTrue(pathIn.Any());
+        Assert.IsTrue(pathOut.Any());
+    }
+
+    [TestMethod]
+    public void FindRoute_OddlySpecific() {
+        Map desertland = InitWorld.World.GetMap("desertland");
+        Map spookytown = InitWorld.World.GetMap("spookytown");
+        MapLocation start = new(desertland, new(99.61489f, -1016.00006f));
+        MapLocation end = new(spookytown, new(676.5f, 129));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end);
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
+
 }

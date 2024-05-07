@@ -26,6 +26,12 @@ public class World {
             new(GetMap("main"), new(56, -122))
         ];
         _scrollsLocation = new(GetMap("main"), new(-465, -71));
+
+        _gooBrawlLocation = GetMap("goobrawl").DefaultSpawn;
+        _bigAssCrabLocation = new(GetMap("main"), new(-1000, 1700));
+        _frankyLocation = new(GetMap("level2w"), new(-300, 150));
+        _iceGolemLocation = new(GetMap("winterland"), new(820, 425));
+        _abTestingLocation = GetMap("abtesting").DefaultSpawn;
     }
 
     public GameData Data => _data;
@@ -33,10 +39,11 @@ public class World {
     public MapGraph MapsGraph => _mapsGraph;
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGridPathSettings? settings = null, bool permitTeleport = true) {
-        settings ??= new();
-        List<IMapGraphEdge> edges = _mapsGraph.InterMap_Djikstra(start, goal, permitTeleport, settings.Value);
-        MergeAdjacentIntraMapEdgesInPlace(edges, settings.Value);
+    public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGraphPathSettings? graphSettings = null, MapGridPathSettings? gridSettings = null) {
+        graphSettings ??= new();
+        gridSettings ??= new();
+        List<IMapGraphEdge> edges = _mapsGraph.InterMap_Djikstra(start, goal, graphSettings.Value, gridSettings.Value);
+        MergeAdjacentIntraMapEdgesInPlace(edges, gridSettings.Value);
         return edges;
     }
 
@@ -49,6 +56,12 @@ public class World {
     public MapLocation[] PotionLocations => _potionLocations;
     public MapLocation ScrollsLocation => _scrollsLocation;
 
+    public MapLocation GooBrawlLocation => _gooBrawlLocation;
+    public MapLocation BigAssCrabLocation => _bigAssCrabLocation;
+    public MapLocation FrankyLocation => _frankyLocation;
+    public MapLocation IceGolemLocation => _iceGolemLocation;
+    public MapLocation ABTestingLocation => _abTestingLocation;
+
     private readonly GameData _data;
     private readonly Dictionary<string, Map> _maps;
     private readonly MapGraph _mapsGraph;
@@ -58,6 +71,12 @@ public class World {
     private readonly MapLocation _exchangeLocations;
     private readonly MapLocation[] _potionLocations;
     private readonly MapLocation _scrollsLocation;
+
+    private readonly MapLocation _gooBrawlLocation;
+    private readonly MapLocation _bigAssCrabLocation;
+    private readonly MapLocation _frankyLocation;
+    private readonly MapLocation _iceGolemLocation;
+    private readonly MapLocation _abTestingLocation;
 
     // Attempt to merge any adjacent intra-map edges in the same map via a direct path.
     // This can increase the accuracy (avoiding useless ramp on/off), but we limit by cost to ensure we don't have a large perf hit.

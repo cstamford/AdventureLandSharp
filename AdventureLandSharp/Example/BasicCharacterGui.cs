@@ -1,6 +1,7 @@
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
 using AdventureLandSharp.Interfaces;
+using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Example;
 
@@ -106,6 +107,9 @@ public class BasicCharacterGui : ISessionGui {
     }
 
     private static void DrawMapGrid(Map map, Rectangle bounds) {
+        float minCost = map.Grid.Terrain.ToEnumerable().Min(x => x.Cost);
+        float maxCost = map.Grid.Terrain.ToEnumerable().Max(x => x.Cost);
+
         for (int x = 0; x < map.Grid.Width; x++) {
             for (int y = 0; y < map.Grid.Height; y++) {
                 MapGridCell cell = new(x, y);
@@ -121,6 +125,11 @@ public class BasicCharacterGui : ISessionGui {
 
                 if (pos.IsWalkable(map)) {
                     Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
+                }
+
+                if (pos.Cost(map) > 1) {
+                    float costZeroToOne = (pos.Cost(map) - minCost) / (maxCost - minCost);
+                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(255, 0, 0, (int)(costZeroToOne * 255)));
                 }
             }
         }

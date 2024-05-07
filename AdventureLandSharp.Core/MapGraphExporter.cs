@@ -8,6 +8,7 @@ public static class MapGraphExporter {
 
         sb.AppendLine("digraph G {");
 
+        /*
         foreach (IGrouping<string, MapLocation> group in graph.Vertices.GroupBy(v => v.Map.Name)) {
             string colour = $"#{new Random().Next(0xFFFFFF):X6}";
 
@@ -25,6 +26,7 @@ public static class MapGraphExporter {
 
             sb.AppendLine("    }");
         }
+        */
 
         sb.AppendLine("}");
 

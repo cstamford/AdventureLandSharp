@@ -25,7 +25,13 @@ public class MapConnections(string mapName, GameData gameData, GameDataMap mapDa
 
     private readonly List<MapConnection> _connections = CreateConnections(mapName, gameData, mapData);
 
-    private static List<MapConnection> CreateConnections(string mapName, GameData gameData, GameDataMap mapData) {
+    private static List<MapConnection> CreateConnections(string mapName, GameData gameData, GameDataMap mapData) => [
+        .. GetDoorConnections(mapName, gameData, mapData),
+        .. GetTransporterConnections(mapName, gameData, mapData),
+        GetJailConnection(gameData)
+    ];
+
+    private static List<MapConnection> GetDoorConnections(string mapName, GameData gameData, GameDataMap mapData) {
         List<MapConnection> connections = [];
 
         foreach (JsonElement[] door in mapData.Doors) {
@@ -46,6 +52,12 @@ public class MapConnections(string mapName, GameData gameData, GameDataMap mapDa
             }
         }
 
+        return connections;
+    }
+
+    private static List<MapConnection> GetTransporterConnections(string mapName, GameData gameData, GameDataMap mapData) {
+        List<MapConnection> connections = [];
+
         GameDataNpc transporterNpc = gameData.Npcs["transporter"];
         foreach (GameDataMapNpc npc in mapData.Npcs.Where(npc => npc.Id == "transporter")) {
             foreach ((string? destMap, long destSpawnId) in transporterNpc.Places!) {
@@ -59,15 +71,17 @@ public class MapConnections(string mapName, GameData gameData, GameDataMap mapDa
             }
         }
 
+        return connections;
+    }
+
+    private static MapConnection GetJailConnection(GameData gameData) {
         double[] jailSpawn = gameData.Maps["jail"].SpawnPositions[0];
         double[] mainSpawn = gameData.Maps["main"].SpawnPositions[0];
 
-        connections.Add(new(
+        return new(
             MapConnectionType.Leave,
             "jail", (float)jailSpawn[0], (float)jailSpawn[1],
             "main", (float)mainSpawn[0], (float)mainSpawn[1], 0
-        ));
-
-        return connections;
+        );
     }
 }

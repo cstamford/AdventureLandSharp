@@ -1,3 +1,4 @@
+using AdventureLandSharp.Core.Util;
 using Faster.Map.QuadMap;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
@@ -56,24 +57,25 @@ public readonly record struct MapGridCell(ushort X, ushort Y) {
     public override int GetHashCode() => X | (Y << 16);
 }
 
-public readonly record struct MapGridCellData(bool Walkable, float Cost);
+public readonly record struct MapGridCellData(float Cost) {
+    public static MapGridCellData operator +(MapGridCellData lhs, float rhs) => lhs with { Cost = lhs.Cost + rhs };
+    public static MapGridCellData operator +(MapGridCellData lhs, double rhs) => lhs with { Cost = lhs.Cost + (float)rhs };
+    public static MapGridCellData Unwalkable => new(0);
+    public static MapGridCellData Walkable => new(1);
+    public readonly bool IsWalkable => Cost >= 1;
+}
 
 public readonly record struct MapGridPath(float Cost, List<MapGridCell> Points);
 
-public readonly record struct MapGridPathSettings(
-    MapGridHeuristic Heuristic,
-    int? MaxSteps = null,
-    float? MaxCost = null)
-{
-    public MapGridPathSettings() : this(MapGridHeuristic.Euclidean, null, null) 
-    { }
+public readonly record struct MapGridPathSettings(MapGridHeuristic Heuristic,int? MaxSteps, float? MaxCost) {
+    public MapGridPathSettings() : this(MapGridHeuristic.Euclidean, null, null) { }
 }
 
 public class MapGrid {
-    public const int CellSize = 8;
-    public const int CellWallUnwalkable = 6;
-    public const int CellWallAvoidance = CellSize*2;
+    public const int CellSize = Utils.InDebugMode ? 6 : 3;
     public static readonly float CellWorldEpsilon = MathF.Sqrt(CellSize*CellSize + CellSize*CellSize);
+    public const int CellWallUnwalkable = CellSize/2;
+    public const int CellWallAvoidance = GameConstants.PlayerWidth/2 + CellSize/2;
 
     public MapGrid(GameDataMap mapData, GameLevelGeometry mapGeometry) {
         _terrain = CreateTerrain(mapData, mapGeometry);
@@ -102,7 +104,7 @@ public class MapGrid {
     public bool IsWithinBounds(Vector2 pos) => IsWithinBounds(WorldToGrid(pos));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsWalkable(MapGridCell pos) => IsWithinBounds(pos) && _terrain[pos.X, pos.Y].Walkable;
+    public bool IsWalkable(MapGridCell pos) => IsWithinBounds(pos) && _terrain[pos.X, pos.Y].IsWalkable;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsWalkable(Vector2 pos) => IsWalkable(WorldToGrid(pos));
@@ -182,7 +184,7 @@ public class MapGrid {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public MapGridCell FindNearestWalkable(MapGridCell start, MapGridPathSettings settings) {
+    public MapGridCell? FindNearestWalkable(MapGridCell start, MapGridPathSettings settings) {
         if (IsWalkable(start)) {
             return start;
         }
@@ -218,7 +220,7 @@ public class MapGrid {
             }
         }
 
-        throw new Exception("No walkable cell found.");
+        return null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
@@ -270,7 +272,8 @@ public class MapGrid {
     private readonly int _height;
     private readonly GameLevelGeometry _mapGeometry;
     private static readonly MapGridCell[] _neighbourOffsets = [ 
-        new(-1,  0), new(1, 0), new(0, -1), new(0,  1)
+        new(-1,  0), new(1, 0), new(0, -1), new(0,  1),
+        new(-1, -1), new(1, 1), new(-1, 1), new(1, -1)
     ];
 
     private static readonly ThreadLocal<QuadMap<MapGridCell, (float RunningCost, MapGridCell Cell)>> _dictPool = new(() => new());
@@ -313,27 +316,28 @@ public class MapGrid {
                 int worldX = geo.MinX + x * CellSize;
                 int worldY = geo.MinY + y * CellSize;
 
-                Envelope cellEnvelope = new(worldX, worldX + CellSize, worldY, worldY + CellSize);
-                Geometry cellGeometry = fac.ToGeometry(cellEnvelope);
-
-                IList<LineString> query = spatial.Query(new Envelope(
-                    worldX - CellSize - CellWallAvoidance - CellWallUnwalkable,
-                    worldX + CellSize + CellSize + CellWallAvoidance + CellWallUnwalkable,
-                    worldY - CellSize - CellWallAvoidance - CellWallUnwalkable,
-                    worldY + CellSize + CellSize + CellWallAvoidance + CellWallUnwalkable
+                // Create a spatial query covering the total area we care about overlaps in.
+                IList<LineString> broadQuery = spatial.Query(new Envelope(
+                    worldX - CellWallAvoidance,
+                    worldX + CellSize + CellWallAvoidance,
+                    worldY - CellWallAvoidance,
+                    worldY + CellSize + CellWallAvoidance
                 ));
 
-                bool walkable = true;
-                float cost = 1.0f;
-
-                if (query.Count > 0) {
-                    walkable = !query.Any(l => l.Intersects(cellGeometry));
-                    double dist = query.Min(l => l.Distance(new Point(worldX + CellSize / 2, worldY + CellSize / 2)));
-                    const float avoidance = CellWallAvoidance * 2;
-                    cost += (float)((avoidance - Math.Min(dist, avoidance)) / avoidance);
+                if (broadQuery.Count == 0) { // There's no overlap at all. We can just move on.
+                    grid[x, y] = MapGridCellData.Walkable;
+                    continue;
                 }
 
-                grid[x, y] = new MapGridCellData(walkable, cost);
+                // Create geometry for the cell itself - we check this against anything overlapping the spatial query.
+                // - Anything too close to the wall is marked as unwalkable.
+                // - Anything within the wall avoidance distance is marked as walkable, but with a scaling penalty.
+                Envelope cellEnvelope = new(worldX, worldX + CellSize, worldY, worldY + CellSize);
+                Geometry cellGeometry = fac.ToGeometry(cellEnvelope);
+                double dist = broadQuery.Min(l => l.Distance(cellGeometry));
+                grid[x, y] = dist > CellWallUnwalkable ? 
+                    MapGridCellData.Walkable + (CellWallAvoidance - Math.Min(dist, CellWallAvoidance)) / CellWallAvoidance :
+                    MapGridCellData.Unwalkable;
             }
         });
 
@@ -348,7 +352,7 @@ public class MapGrid {
         for (int x = 0; x < width; ++x) {
             for (int y = 0; y < height; ++y) {
                 if (!reachableCells.Contains(new MapGridCell(x, y))) {
-                    grid[x, y] = grid[x, y] with { Walkable = false };
+                    grid[x, y] = MapGridCellData.Unwalkable;
                 }
             }
         }
@@ -368,7 +372,7 @@ public class MapGrid {
                 continue;
             }
 
-            if (!grid[pos.X, pos.Y].Walkable || !reachableCells.Add(pos)) {
+            if (!grid[pos.X, pos.Y].IsWalkable || !reachableCells.Add(pos)) {
                 continue;
             }
 

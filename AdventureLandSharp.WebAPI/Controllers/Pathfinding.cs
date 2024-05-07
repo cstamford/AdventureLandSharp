@@ -71,7 +71,9 @@ public class PathfindingController(World world) : ControllerBase {
             MapLocation start = new(sourceMap, req.Source.Location);
             MapLocation end = new(destMap, req.Dest.Location);
 
-            IEnumerable<IMapGraphEdge> path = world.FindRoute(start, end, new(Heuristic: req.Heuristic));
+            MapGraphPathSettings graphSettings = new();
+            MapGridPathSettings gridSettings = new() { Heuristic = req.Heuristic };
+            IEnumerable<IMapGraphEdge> path = world.FindRoute(start, end, graphSettings, gridSettings);
 
             return req.HumanReadable ?
                 Ok(path.Select(x => x.ToString())) :

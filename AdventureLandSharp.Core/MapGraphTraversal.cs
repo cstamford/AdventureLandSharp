@@ -40,8 +40,8 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private readonly Logger _log = new(socket.Player.Name, "MapGraphTraversal");
 
     private bool CurrentEdgeFinished => _edge != null && _edge switch { 
-        MapGraphEdgeInterMap interMap => 
-            Player.MapName == interMap.Dest.Map.Name,
+        MapGraphEdgeInterMap or MapGraphEdgeJoin => 
+            Player.MapName == _edge.Dest.Map.Name && Player.Position.Equivalent(_edge.Dest.Position),
         MapGraphEdgeIntraMap intraMap => 
             Player.Position.Equivalent(intraMap.Path[^1]) || Player.Position.Equivalent(intraMap.Dest.Position),
         MapGraphEdgeTeleport teleport => 
@@ -54,14 +54,14 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         (_edge is MapGraphEdgeInterMap && Player.MapName == _edge.Dest.Map.Name));
 
     private DateTimeOffset NextEdgeUpdate(DateTimeOffset now) => _edge switch {
-        MapGraphEdgeInterMap => now.Add(TimeSpan.FromSeconds(1.0)),
+        MapGraphEdgeInterMap or MapGraphEdgeJoin => now.Add(TimeSpan.FromSeconds(1.0)),
         MapGraphEdgeTeleport => now.Add(TimeSpan.FromSeconds(4.5)),
         _ => DateTimeOffset.MinValue
     };
 
     private void ProcessEdge() {
         if (_edge is MapGraphEdgeInterMap interMap) {
-            _log.Debug($"Using {interMap.Type} to {interMap.Dest}.");
+            _log.Debug($"{interMap}");
             if (interMap.Type is MapConnectionType.Door or MapConnectionType.Transporter) {
                 socket.Emit<Outbound.Transport>(new(interMap.Dest.Map.Name, interMap.DestSpawnId));
             } else if (interMap.Type is MapConnectionType.Leave) {
@@ -69,19 +69,17 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             } else {
                 throw new NotImplementedException($"Unknown inter-map edge type: {interMap.Type}");
             }
+        } else if (_edge is MapGraphEdgeJoin join) {
+            _log.Debug($"{join}");
+            socket.Emit<Outbound.Join>(new(join.EventName));
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
-            Debug.Assert(Player.MovementPlan == null || !Player.MovementPlan.Finished,
-                "Movement plan is done - but edge is not finished?");
-
             if (Player.MovementPlan == null) {
                 intraMap = ProcessEdge_MapTransitionDistanceSkip(intraMap);
-                intraMap = ProcessEdge_LineOfSightStartSkip(intraMap);
-
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
                 _edge = intraMap;
             }
         } else if (_edge is MapGraphEdgeTeleport tp) {
-            _log.Debug($"Teleporting to {tp.Dest}.");
+            _log.Debug($"{tp}");
             socket.Emit<Outbound.Town>(new());
         } else {
             throw new NotImplementedException($"Unknown edge type: {_edge}");
@@ -92,9 +90,10 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     // This allows us to skip walking right to the end of the edge to use e.g. a door which has a useable distance.
     private MapGraphEdgeIntraMap ProcessEdge_MapTransitionDistanceSkip(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
+            float buffer = Math.Max(GameConstants.PlayerWidth, GameConstants.PlayerHeight) + MapGrid.CellWorldEpsilon;
             float cuttableDistance = nextEdgeInter.Type switch {
-                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon*2,
-                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon*2,
+                MapConnectionType.Door => GameConstants.DoorDist - buffer,
+                MapConnectionType.Transporter => GameConstants.TransporterDist - buffer,
                 _ => 0.0f
             };
 

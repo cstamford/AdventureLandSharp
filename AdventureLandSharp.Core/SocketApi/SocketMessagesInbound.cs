@@ -124,6 +124,45 @@ public static class Inbound {
         [property: JsonConverter(typeof(JsonConverterArrayOrFalse<string>)), JsonPropertyName("list")] string[] Members
     );
 
+    [InboundSocketMessage("server_info")]
+    public readonly record struct ServerInfo(
+        [property: JsonPropertyName("schedule")] ServerInfo_Schedule Schedule,
+
+        [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("egghunt")] bool IsEaster,
+        [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("halloween")] bool IsHalloween,
+        [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("holidayseason")] bool IsHolidaySeason,
+        [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("lunarnewyear")] bool IsLunarNewYear,
+        [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("valentines")] bool IsValentines,
+
+        [property: JsonPropertyName("crabxx")] ServerInfo_EventMonster? BigAssCrab,
+        [property: JsonPropertyName("dragold")] ServerInfo_EventMonster? Dragold,
+        [property: JsonPropertyName("franky")] ServerInfo_EventMonster? Franky,
+        [property: JsonPropertyName("grinch")] ServerInfo_EventMonster? Grinch,
+        [property: JsonPropertyName("icegolem")] ServerInfo_EventMonster? IceGolem,
+        [property: JsonPropertyName("mrgreen")] ServerInfo_EventMonster? MrGreen,
+        [property: JsonPropertyName("mrpumpkin")] ServerInfo_EventMonster? MrPumpkin,
+        [property: JsonPropertyName("pinkgoo")] ServerInfo_EventMonster? PinkGoo,
+        [property: JsonPropertyName("snowman")] ServerInfo_EventMonster? Snowman,
+        [property: JsonPropertyName("tiger")] ServerInfo_EventMonster? Tiger,
+        [property: JsonPropertyName("wabbit")] ServerInfo_EventMonster? Wabbit
+    );
+
+    public readonly record struct ServerInfo_EventMonster(
+        [property: JsonPropertyName("live")] bool IsLive,
+        [property: JsonPropertyName("map")] string MapName,
+        [property: JsonPropertyName("x")] float MapX,
+        [property: JsonPropertyName("y")] float MapY,
+        [property: JsonPropertyName("hp")] int Health,
+        [property: JsonPropertyName("max_hp")] int MaxHealth
+    );
+
+    public readonly record struct ServerInfo_Schedule(
+        [property: JsonPropertyName("time_offset")] int TimeOffset,
+        [property: JsonPropertyName("dailies")] int[] DailiesTimes,
+        [property: JsonPropertyName("nightlies")] int[] NightliesTimes,
+        [property: JsonPropertyName("night")] bool IsNight
+    );
+
     [InboundSocketMessage("server_message")]
     public readonly record struct ServerMessageData(
         [property: JsonPropertyName("color")] string Colour,

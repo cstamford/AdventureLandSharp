@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 namespace AdventureLandSharp.Core;
 
 public class FastPriorityQueue<T>() where T : struct {
-    public int Count => _size;
+    public IReadOnlyList<(float Priority, T Item)> Items => _elements;
 
     public void Clear() {
         _size = 0;
@@ -18,8 +18,7 @@ public class FastPriorityQueue<T>() where T : struct {
             _elements[_size] = (priority, item);
         }
 
-        ++_size;
-        SiftUp(_size - 1);
+        SiftUp(_size++);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -55,10 +54,10 @@ public class FastPriorityQueue<T>() where T : struct {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private void SiftDown(int index){
-        while (index < _size) {
-            int left = index * 2 + 1;
-            int right = left + 1;
+    private void SiftDown(int index) {
+        while (true) {
+            int left = 2 * index + 1;
+            int right = 2 * index + 2; 
             int smallest = index;
 
             if (left < _size && _elements[left].Priority < _elements[smallest].Priority) {

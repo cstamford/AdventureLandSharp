@@ -62,6 +62,11 @@ public static class Outbound {
         [property: JsonPropertyName("id")] string Id
     );
 
+    [OutboundSocketMessage("join")]
+    public readonly record struct Join(
+        [property: JsonPropertyName("name")] string Name
+    );
+
     [OutboundSocketMessage("loaded")]
     public readonly record struct Loaded(
         [property: JsonPropertyName("success")] bool Success,

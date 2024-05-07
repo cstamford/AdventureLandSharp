@@ -19,6 +19,12 @@ public static class GameConstants {
     public const int PlayerHeight = 36;
     public const int DefaultEntityWidth = 24;
     public const int DefaultEntityHeight = 24;
+
+    public const string GooBrawlEventName = "goobrawl";
+    public const string BigAssCrabEventName = "crabxx";
+    public const string FrankyEventName = "franky";
+    public const string IceGolemEventName = "icegolem";
+    public const string ABTestingEventName = "abtesting";
 }
 
 public readonly record struct GameLevelGeometry(

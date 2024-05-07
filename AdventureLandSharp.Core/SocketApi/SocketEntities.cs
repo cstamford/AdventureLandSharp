@@ -6,6 +6,8 @@ using System.Text.Json;
 namespace AdventureLandSharp.Core.SocketApi;
 
 public abstract class Entity {
+    public override string ToString() => $"{GetType().Name} [{Name}/{Id}] {Position}";
+
     public bool Dead => Vitals.Dead;
 
     public float Health => Vitals.Hp;

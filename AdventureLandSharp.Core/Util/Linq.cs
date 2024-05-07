@@ -13,4 +13,10 @@ public static class LinqExtensions {
         }
         return null;
     }
+
+    public static IEnumerable<T> ToEnumerable<T>(this T[,] target) {
+        foreach (T item in target) {
+            yield return item;
+        }
+    }
 }

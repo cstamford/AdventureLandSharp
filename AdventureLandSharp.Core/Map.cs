@@ -6,6 +6,8 @@ using AdventureLandSharp.Core.Util;
 namespace AdventureLandSharp.Core;
 
 public readonly record struct MapLocation(Map Map, Vector2 Position) : IComparable<MapLocation> {
+    public readonly override string ToString() => $"{Map.Name} {Position}";
+
     public readonly int CompareTo(MapLocation other) {
         int mapComparison = Map.Name.CompareTo(other.Map.Name);
         if (mapComparison != 0) return mapComparison;
@@ -17,7 +19,6 @@ public readonly record struct MapLocation(Map Map, Vector2 Position) : IComparab
     }
 
     public readonly override int GetHashCode() => HashCode.Combine(Map.Name, Position.X, Position.Y);
-    public readonly override string ToString() => $"{Map.Name} {Position}";
 
     public readonly bool Equivalent(MapLocation other) => Map == other.Map && Position.Equivalent(other.Position);
     public readonly bool Equivalent(MapLocation other, float epsilon) => Map == other.Map && Position.Equivalent(other.Position, epsilon);
@@ -36,8 +37,18 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGraphEdgeIntraMap? FindPath(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) {
-        Vector2 startWalkable = FindNearestWalkable(start);
-        Vector2 goalWalkable = FindNearestWalkable(goal);
+        settings ??= new();
+
+        MapGridPathSettings nearestWalkableSettings = settings.Value with { MaxSteps = 2048 };
+        MapGridCell? startWalkableCell = Cache_GetNearestWalkable(start, nearestWalkableSettings);
+        MapGridCell? goalWalkableCell = Cache_GetNearestWalkable(goal, nearestWalkableSettings);
+
+        if (!startWalkableCell.HasValue || !goalWalkableCell.HasValue) {
+            return null;
+        }
+
+        Vector2 startWalkable = startWalkableCell.Value.World(this);
+        Vector2 goalWalkable = goalWalkableCell.Value.World(this);
 
         MapLocation startMapLoc = new(this, start);
         MapLocation goalMapLoc = new(this, goal);
@@ -46,8 +57,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
             return start != goal ? new MapGraphEdgeIntraMap(startMapLoc, goalMapLoc, [start, goal], 0) : null;
         }
 
-        (Vector2, Vector2) pathCacheKey = (startWalkable, goalWalkable);
-        if (_pathCache.TryGetValue(pathCacheKey, out MapGraphEdgeIntraMap cachedEdge)) {
+        if (_pathCache.TryGetValue((startWalkable, goalWalkable), out MapGraphEdgeIntraMap cachedEdge)) {
             return CopyEdgeWithRamp(cachedEdge, start, goal);
         }
 
@@ -58,18 +68,38 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
 
         List<Vector2> merged = MergedGridPathToWorld(path.Points);
         List<Vector2> smoothed = SmoothedWorldPath(merged, divisions: 2);
-        MapGraphEdgeIntraMap edge = new(startMapLoc, goalMapLoc, smoothed, path.Cost);
-        _pathCache.TryAdd(pathCacheKey, edge);
-    
-        return CopyEdgeWithRamp(edge, start, goal);
-    }
+        List<Vector2> smoothedReverse = [..smoothed];
+        smoothedReverse.Reverse();
 
-    public Vector2 FindNearestWalkable(Vector2 world) => _grid.FindNearestWalkable(
-        world.Grid(this), new MapGridPathSettings() with { MaxSteps = 512 }).World(this);
+        MapGraphEdgeIntraMap edgeAB = new(startMapLoc, goalMapLoc, smoothed, path.Cost);
+        MapGraphEdgeIntraMap edgeBA = new(goalMapLoc, startMapLoc, smoothedReverse, path.Cost);
+
+        _pathCache.TryAdd((startWalkable, goalWalkable), edgeAB);
+        _pathCache.TryAdd((goalWalkable, startWalkable), edgeBA);
+
+        return CopyEdgeWithRamp(edgeAB, start, goal);
+    }
 
     private readonly MapGrid _grid = new(mapData, mapGeometry);
     private readonly MapConnections _connections = new(mapName, gameData, mapData);
     private readonly ConcurrentDictionary<(Vector2, Vector2), MapGraphEdgeIntraMap> _pathCache = [];
+    private readonly ConcurrentDictionary<MapGridCell, MapGridCell?> _walkableCache = [];
+
+    private MapGridCell? Cache_GetNearestWalkable(Vector2 world, MapGridPathSettings settings) {
+        MapGridCell cell = world.Grid(this);
+
+        if (cell.IsWalkable(Grid)) {
+            return cell;
+        }
+
+        if (_walkableCache.TryGetValue(cell, out MapGridCell? walkable)) {
+            return walkable;
+        }
+
+        MapGridCell? nearest = Grid.FindNearestWalkable(cell, settings);
+        _walkableCache.TryAdd(cell, nearest);
+        return nearest;
+    }
 
     private MapGraphEdgeIntraMap CopyEdgeWithRamp(MapGraphEdgeIntraMap edge, Vector2 start, Vector2 goal) {
         MapGraphEdgeIntraMap copy = edge with { 
