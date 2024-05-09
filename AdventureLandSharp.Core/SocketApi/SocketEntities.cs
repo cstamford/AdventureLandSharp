@@ -48,7 +48,7 @@ public abstract class Entity {
         Level = source.GetInt("level", 0);
         Vitals = source.Deserialize<EntityVitals>();
         Stats = source.Deserialize<EntityStats>();
-        StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
+        StatusEffects = new(source.GetProperty("s").Deserialize<Dictionary<string, StatusEffect>>()!);
         Target = source.GetString("target", string.Empty);
         _name = Id;
     }
@@ -61,7 +61,7 @@ public abstract class Entity {
         Level = source.GetInt("level", 0);
         Vitals = new EntityVitals(monsterDef).Update(source);
         Stats = new EntityStats(monsterDef).Update(source);
-        StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
+        StatusEffects = new(source.GetProperty("s").Deserialize<Dictionary<string, StatusEffect>>()!);
         Target = source.GetString("target", string.Empty);
         _name = monsterDef.Name;
     }
@@ -72,7 +72,7 @@ public abstract class Entity {
         Level = source.GetInt("level", Level);
         Vitals = Vitals.Update(source);
         Stats = Stats.Update(source);
-        StatusEffects = source.GetProperty("s").Deserialize<StatusEffects>();
+        StatusEffects = new(source.GetProperty("s").Deserialize<Dictionary<string, StatusEffect>>()!);
         Target = source.GetString("target", Target);
     }
 
@@ -87,12 +87,8 @@ public abstract class Entity {
         }
 
         if (MovementPlan != null) {
-            bool finished = MovementPlan.Update(dt, Speed);
+            MovementPlan.Update(dt, Speed);
             Position = MovementPlan.Position;
-
-            if (finished) {
-                MovementPlan = null;
-            }
         }
     }
 

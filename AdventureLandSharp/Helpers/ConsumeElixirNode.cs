@@ -14,7 +14,7 @@ public class ConsumeElixirNode(
             int slotId = elixir == null ? -1 : me.Inventory.FindSlotId(elixir);
 
             if (slotId != -1) {
-                socket.Emit(new Outbound.Equip(slotId));
+                socket.Emit<Outbound.Equip>(new(slotId));
                 _cd.Restart();
                 return Status.Success;
             }

@@ -10,15 +10,16 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     public MapLocation End => end;
     public bool Finished => _edges.Count == 0 && (!CurrentEdgeValid || CurrentEdgeFinished);
     public IMapGraphEdge? CurrentEdge => _edge;
+    public IMapGraphEdge? PreviousEdge => _lastEdge;
 
     public void Update() {
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         while (!Finished && (!CurrentEdgeValid || CurrentEdgeFinished)) {
             _log.Debug($"Progressing to next edge. CurrentEdge={CurrentEdge}, CurrentEdgeValid={CurrentEdgeValid}, CurrentEdgeFinished={CurrentEdgeFinished}.");
+            _lastEdge = _edge;
             _edge = _edges.Dequeue();
             _edgeUpdate = now;
-            Player.MovementPlan = null;
         }
 
         if (Finished) {
@@ -36,6 +37,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private LocalPlayer Player => socket.Player;
     private readonly Queue<IMapGraphEdge> _edges = new(edges);
     private IMapGraphEdge? _edge;
+    private IMapGraphEdge? _lastEdge;
     private DateTimeOffset _edgeUpdate;
     private readonly Logger _log = new(socket.Player.Name, "MapGraphTraversal");
 
@@ -71,10 +73,11 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             }
         } else if (_edge is MapGraphEdgeJoin join) {
             _log.Debug($"{join}");
-            socket.Emit<Outbound.Join>(new(join.EventName));
+            socket.Emit<Outbound.Join>(new(join.JoinEventName));
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
-            if (Player.MovementPlan == null) {
+            if (Player.MovementPlan?.Finished ?? true) {
                 intraMap = ProcessEdge_MapTransitionDistanceSkip(intraMap);
+                intraMap = ProcessEdge_LineOfSightStartSkip(intraMap);
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
                 _edge = intraMap;
             }
@@ -83,6 +86,11 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             socket.Emit<Outbound.Town>(new());
         } else {
             throw new NotImplementedException($"Unknown edge type: {_edge}");
+        }
+
+        if (_edge is not MapGraphEdgeIntraMap) {
+            // Clear the movement plan so that we don't introduce race conditions on the other side of a transition/teleport/etc.
+            Player.MovementPlan = null;
         }
     }
 
@@ -117,7 +125,6 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         return edge;
     }
 
-
     // Given an intra-map edge, skips to the first node from the end that has line of sight to the player.
     // This allows us to avoid useless steps (e.g. go backwards and then forwards again) between edges, for example,
     // when teleporting and then being scattered backwards, or when restarting a path near the destination.
@@ -147,29 +154,5 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         }
 
         return edge;
-    }
-}
-
-public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map) : ISocketEntityMovementPlan {
-    public IReadOnlyCollection<Vector2> Path => _pathMovementPlan.Path;
-    public bool Finished => _pathMovementPlan.Finished;
-    public Vector2 Position  => _pathMovementPlan.Position;
-    public Vector2 Goal => _clickAheadPoint;
-    public Vector2 OriginalGoal => _pathMovementPlan.Goal;
-
-    public bool Update(double dt, double speed) { 
-        bool finished = _pathMovementPlan.Update(dt, speed);
-        _clickAheadPoint = Position.SimpleDist(OriginalGoal) > MapGrid.CellWorldEpsilon ? CalculateClickAheadPoint(OriginalGoal, (float)speed) : OriginalGoal;
-        return finished;
-    }
-
-    private readonly PathMovementPlan _pathMovementPlan = new(start, path);
-    private Vector2 _clickAheadPoint = start;
-
-    private Vector2 CalculateClickAheadPoint(Vector2 target, float speed) {
-        Vector2 direction = Vector2.Normalize(target - Position);
-        Vector2 clickAheadTarget = target + direction * speed * 0.33f;
-        MapGridLineOfSight los = map.Grid.LineOfSight(Position.Grid(map), clickAheadTarget.Grid(map));
-        return los.OccludedAt?.World(map) ?? clickAheadTarget;
     }
 }

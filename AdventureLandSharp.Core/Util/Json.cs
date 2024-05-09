@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -5,19 +6,42 @@ using System.Text.Json.Serialization;
 namespace AdventureLandSharp.Core.Util;
 
 public static class JsonOpts {
-    public static JsonSerializerOptions Default { get; } = new() {
+    public static JsonSerializerOptions Default => new JsonSerializerOptions() {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        Converters = { 
-            new JsonStringEnumConverter(),
-            new JsonConverterVector2()
-        }
-    };
+        WriteIndented = true
+    }
+        .AddStringEnumConverter()
+        .AddVector2Converter();
 
-    public static JsonSerializerOptions Condensed { get; } = new(Default) {
-        WriteIndented = false,
-        Converters = { new JsonConverterBool() }
-    };
+    public static JsonSerializerOptions Condensed => new JsonSerializerOptions(Default) { 
+        WriteIndented = false
+    }
+        .AddBoolConverter();
+
+    public static JsonSerializerOptions AddStringEnumConverter(this JsonSerializerOptions options) {
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
+    public static JsonSerializerOptions AddVector2Converter(this JsonSerializerOptions options) {
+        options.Converters.Add(new JsonConverterVector2());
+        return options;
+    }
+
+    public static JsonSerializerOptions AddMapLocationConverter(this JsonSerializerOptions options, World world) {
+        options.Converters.Add(new JsonConverterMapLocation(world));
+        return options;
+    }
+
+    public static JsonSerializerOptions AddArrayOrFalseConverter<T>(this JsonSerializerOptions options) {
+        options.Converters.Add(new JsonConverterArrayOrFalse<T>());
+        return options;
+    }
+
+    public static JsonSerializerOptions AddBoolConverter(this JsonSerializerOptions options) {
+        options.Converters.Add(new JsonConverterBool());
+        return options;
+    }
 }
 
 public class JsonConverterBool : JsonConverter<bool> {
@@ -30,13 +54,16 @@ public class JsonConverterBool : JsonConverter<bool> {
 
 public class JsonConverterVector2 : JsonConverter<Vector2> {
     public override Vector2 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+        Debug.Assert(reader.TokenType == JsonTokenType.StartArray);
         reader.Read();
+
         float x = reader.GetSingle();
-
         reader.Read();
+
         float y = reader.GetSingle();
-
         reader.Read();
+
+        Debug.Assert(reader.TokenType == JsonTokenType.EndArray);
         return new(x, y);
     }
 
@@ -54,6 +81,33 @@ public class JsonConverterArrayOrFalse<T> : JsonConverter<T[]> {
 
     public override void Write(Utf8JsonWriter writer, T[] value, JsonSerializerOptions options) =>
         JsonSerializer.Serialize(writer, value, options);
+}
+
+public class JsonConverterMapLocation(World world) : JsonConverter<MapLocation> {
+    public override MapLocation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+        Debug.Assert(reader.TokenType == JsonTokenType.StartArray);
+        reader.Read();
+
+        string mapName = reader.GetString()!;
+        reader.Read();
+
+        float x = reader.GetSingle();
+        reader.Read();
+
+        float y = reader.GetSingle();
+        reader.Read();
+
+        Debug.Assert(reader.TokenType == JsonTokenType.EndArray);
+        return new(world.GetMap(mapName), new(x, y));
+    }
+
+    public override void Write(Utf8JsonWriter writer, MapLocation location, JsonSerializerOptions options) {
+        writer.WriteStartArray();
+        writer.WriteStringValue(location.Map.Name);
+        writer.WriteNumberValue(location.Position.X);
+        writer.WriteNumberValue(location.Position.Y);
+        writer.WriteEndArray();
+    }
 }
 
 public static class JsonExtensions {

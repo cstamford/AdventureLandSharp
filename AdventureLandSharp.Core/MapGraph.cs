@@ -34,17 +34,17 @@ public readonly record struct MapGraphEdgeTeleport(MapLocation Source, MapLocati
     public float Cost => 100;
 }
 
-public readonly record struct MapGraphEdgeJoin(MapLocation Source, MapLocation Dest, string EventName) : IMapGraphEdge {
-    public override readonly string ToString() => $"Joining from {Source} to {Dest} for {EventName}.";
+public readonly record struct MapGraphEdgeJoin(MapLocation Source, MapLocation Dest, string JoinEventName) : IMapGraphEdge {
+    public override readonly string ToString() => $"Joining from {Source} to {Dest} for {JoinEventName}.";
     public float Cost => 50;
 }
 
-public readonly record struct MapGraphPathSettings(bool EnableTeleport, List<(string EventName, MapLocation Dest)> EnableEvents) {
+public readonly record struct MapGraphPathSettings(bool EnableTeleport, IReadOnlyList<(string JoinEventName, MapLocation Dest)> EnableEvents) {
     public MapGraphPathSettings() : this(EnableTeleport: true, EnableEvents: []) { }
 }
 
 public class MapGraph {
-    public MapGraph(IReadOnlyDictionary<string, Map> maps) {
+    public MapGraph(IReadOnlyDictionary<string, Map> maps, IEnumerable<MapLocation> extraVertices) {
         _mapStorage = maps.ToDictionary(x => x.Value, x => new MapStorage(x.Value));
 
         foreach ((Map map, MapStorage storage) in _mapStorage) {
@@ -69,6 +69,11 @@ public class MapGraph {
 
             MapLocation to = new(maps[connection.DestMap], new(connection.DestX, connection.DestY));
             _mapStorage[to.Map].Vertices.Add(to.Position);
+        }
+
+        // Adding any additional vertices.
+        foreach (MapLocation vertex in extraVertices) {
+            _mapStorage[vertex.Map].Vertices.Add(vertex.Position);
         }
     }
 
@@ -96,7 +101,7 @@ public class MapGraph {
             // In the event that this is a direct path (same map), try generating a path directly.
             // This will prevent us from bouncing between vertices.
             // Note that we still want to run Dijkstra's to look for cool shortcuts.
-            directPath = start.Map.FindPath(start.Position, goal.Position, gridSettings with { MaxCost = 512 });
+            directPath = start.Map.FindPath(start.Position, goal.Position, gridSettings);
 
             // Only trigger ramp generation if using the ramp is likely to be cheaper than the direct path.
             // This is because if it isn't, it's very unlikely to be useful, and costs a lot of time.

@@ -23,7 +23,7 @@ public class BasicCharacter : ICharacter {
 
         _btAbility = new Selector(
             // If we're dead, respawn.
-            new If(() => Me.Dead, () => _socket.Emit(new Outbound.Respawn())),
+            new If(() => Me.Dead, () => _socket.Emit<Outbound.Respawn>(new())),
 
             // If we're at very low health, drink a potion if we can, then disconnect.
             new If(() => Me.HealthPercent <= 15, new Selector( 
@@ -96,7 +96,7 @@ public class BasicCharacter : ICharacter {
                 .FirstOrDefault();
 
             if (target != null) {
-                _socket.Emit(new Outbound.Attack(target.Id));
+                _socket.Emit<Outbound.Attack>(new(target.Id));
                 _attackCd.Duration = Me.AttackSpeed;
                 _attackCd.Restart();
                 return Status.Success;

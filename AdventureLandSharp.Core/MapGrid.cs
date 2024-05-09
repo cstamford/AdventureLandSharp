@@ -1,4 +1,3 @@
-using AdventureLandSharp.Core.Util;
 using Faster.Map.QuadMap;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
@@ -57,11 +56,13 @@ public readonly record struct MapGridCell(ushort X, ushort Y) {
     public override int GetHashCode() => X | (Y << 16);
 }
 
-public readonly record struct MapGridCellData(float Cost) {
+public readonly record struct MapGridCellData(float Cost, float CornerScore) {
     public static MapGridCellData operator +(MapGridCellData lhs, float rhs) => lhs with { Cost = lhs.Cost + rhs };
     public static MapGridCellData operator +(MapGridCellData lhs, double rhs) => lhs with { Cost = lhs.Cost + (float)rhs };
-    public static MapGridCellData Unwalkable => new(0);
-    public static MapGridCellData Walkable => new(1);
+    public static MapGridCellData Unwalkable => Default with { Cost = 0 };
+    public static MapGridCellData Walkable => Default with { Cost = 1 };
+    public static MapGridCellData Default => default;
+
     public readonly bool IsWalkable => Cost >= 1;
 }
 
@@ -72,10 +73,11 @@ public readonly record struct MapGridPathSettings(MapGridHeuristic Heuristic,int
 }
 
 public class MapGrid {
-    public const int CellSize = Utils.InDebugMode ? 6 : 3;
+    public const int CellSize = 5;
     public static readonly float CellWorldEpsilon = MathF.Sqrt(CellSize*CellSize + CellSize*CellSize);
     public const int CellWallUnwalkable = CellSize/2;
-    public const int CellWallAvoidance = GameConstants.PlayerWidth/2 + CellSize/2;
+    public const int CellWallAvoidance = CellWallUnwalkable + GameConstants.PlayerWidth/2;
+    public const int CellWallSpatialQuery = CellWallAvoidance + 16;
 
     public MapGrid(GameDataMap mapData, GameLevelGeometry mapGeometry) {
         _terrain = CreateTerrain(mapData, mapGeometry);
@@ -114,6 +116,18 @@ public class MapGrid {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float Cost(Vector2 pos) => Cost(WorldToGrid(pos));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float CornerScore(MapGridCell pos) => IsWithinBounds(pos) ? _terrain[pos.X, pos.Y].CornerScore : 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float CornerScore(Vector2 pos) => CornerScore(WorldToGrid(pos));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MapGridCellData Data(MapGridCell pos) => IsWithinBounds(pos) ? _terrain[pos.X, pos.Y] : MapGridCellData.Unwalkable;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MapGridCellData Data(Vector2 pos) => Data(WorldToGrid(pos));
 
     public MapGridPath IntraMap_AStar(Vector2 start, Vector2 goal, MapGridPathSettings settings) =>
         IntraMap_AStar(WorldToGrid(start), WorldToGrid(goal), settings);
@@ -318,10 +332,10 @@ public class MapGrid {
 
                 // Create a spatial query covering the total area we care about overlaps in.
                 IList<LineString> broadQuery = spatial.Query(new Envelope(
-                    worldX - CellWallAvoidance,
-                    worldX + CellSize + CellWallAvoidance,
-                    worldY - CellWallAvoidance,
-                    worldY + CellSize + CellWallAvoidance
+                    worldX - CellWallSpatialQuery,
+                    worldX + CellSize + CellWallSpatialQuery,
+                    worldY - CellWallSpatialQuery,
+                    worldY + CellSize + CellWallSpatialQuery
                 ));
 
                 if (broadQuery.Count == 0) { // There's no overlap at all. We can just move on.
@@ -335,9 +349,46 @@ public class MapGrid {
                 Envelope cellEnvelope = new(worldX, worldX + CellSize, worldY, worldY + CellSize);
                 Geometry cellGeometry = fac.ToGeometry(cellEnvelope);
                 double dist = broadQuery.Min(l => l.Distance(cellGeometry));
-                grid[x, y] = dist > CellWallUnwalkable ? 
-                    MapGridCellData.Walkable + (CellWallAvoidance - Math.Min(dist, CellWallAvoidance)) / CellWallAvoidance :
+
+                MapGridCellData cell = dist > CellWallUnwalkable ? 
+                    MapGridCellData.Walkable + ((dist > CellWallAvoidance) ? 0 : (CellWallAvoidance - Math.Min(CellWallUnwalkable + dist, CellWallAvoidance)) / CellWallAvoidance) :
                     MapGridCellData.Unwalkable;
+
+                // Calculate a score which represents "how much of a corner is this?".
+
+                Coordinate center = new(worldX + CellSize/2, worldY + CellSize/2);
+                LineString lineNW = fac.CreateLineString([center, new(worldX - CellWallSpatialQuery, worldY - CellWallSpatialQuery)]);
+                LineString lineN = fac.CreateLineString([center, new(worldX, worldY - CellWallSpatialQuery)]); 
+                LineString lineNE = fac.CreateLineString([center, new(worldX + CellWallSpatialQuery, worldY - CellWallSpatialQuery)]);
+                LineString lineE = fac.CreateLineString([center, new(worldX + CellWallSpatialQuery, worldY)]);
+                LineString lineSE = fac.CreateLineString([center, new(worldX + CellWallSpatialQuery, worldY + CellWallSpatialQuery)]);
+                LineString lineS = fac.CreateLineString([center, new(worldX, worldY + CellWallSpatialQuery)]);
+                LineString lineSW = fac.CreateLineString([center, new(worldX - CellWallSpatialQuery, worldY + CellWallSpatialQuery)]);
+                LineString lineW = fac.CreateLineString([center, new(worldX - CellWallSpatialQuery, worldY)]);
+
+                double NW = broadQuery.Min(l => l.Distance(lineNW));
+                double N = broadQuery.Min(l => l.Distance(lineN));
+                double NE = broadQuery.Min(l => l.Distance(lineNE));
+                double E = broadQuery.Min(l => l.Distance(lineE));
+                double SE = broadQuery.Min(l => l.Distance(lineSE));
+                double S = broadQuery.Min(l => l.Distance(lineS));
+                double SW = broadQuery.Min(l => l.Distance(lineSW));
+                double W = broadQuery.Min(l => l.Distance(lineW));
+
+                double maxDist = CellWallSpatialQuery*2 + CellSize/2;
+        
+                grid[x, y] = cell with { 
+                    CornerScore = (float)((
+                        (1 - NW / maxDist) + 
+                        (1 - N / maxDist) + 
+                        (1 - NE / maxDist) + 
+                        (1 - E / maxDist) + 
+                        (1 - SE / maxDist) + 
+                        (1 - S / maxDist) +
+                        (1 - SW / maxDist) +
+                        (1 - W / maxDist)
+                    ) / 8)
+                };
             }
         });
 

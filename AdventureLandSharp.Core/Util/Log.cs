@@ -139,6 +139,8 @@ public static class Log {
 }
 
 public class Logger(params string[] tags) {
+    public LogLevel LogLevel => Log.LogLevel;
+    public bool LogLevelEnabled(LogLevel level) => Log.LogLevelEnabled(level);
     public void Error(string message) => Log.Error(tags, message);
     public void Error(IEnumerable<string> otherTags, string message) => Log.Error(tags.Concat(otherTags), message);
     public void Warn(string message) => Log.Warn(tags, message);

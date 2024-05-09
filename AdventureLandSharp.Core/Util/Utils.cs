@@ -25,20 +25,25 @@ public static class Utils {
     public static TimeSpan SafeAbilityCd(TimeSpan time) => time.Add(TimeSpan.FromMilliseconds(100));
 
     public static MapLocation[] CalculateOptimalVisitOrder(World world, MapLocation[] points) {
-        ThreadLocal<(float Cost, MapLocation[] Points)> threadBest = new(() => new(float.MaxValue, []), trackAllValues: true);
+        float bestCost = float.MaxValue;
+        MapLocation[] bestPermutation = [];
+        MapLocation[][] permutations = [..CalculateOptimalVisitPermutations(points, points.Length)];
 
-        Parallel.ForEach(CalculateOptimalVisitPermutations(points, points.Length), permutation => {
+        Log.Info($"Calculating optimal visit order for {points.Length} points. There are {permutations.Length} permutations.");
+
+        for (int i = 0; i < permutations.Length; ++i) {
+            MapLocation[] permutation = permutations[i];
             float cost = CalculateOptimalVisitOrderCost(world, permutation);
-            (float bestCost, _) = threadBest.Value;
-            if (cost < bestCost) {
-                threadBest.Value = (cost, permutation);
-            }
-        });
 
-        return threadBest.Values
-            .OrderBy(x => x.Cost)
-            .ThenBy(x => x.Points.First())
-            .First().Points;
+            if (cost < bestCost) {
+                bestCost = cost;
+                bestPermutation = permutation;
+            }
+        }
+
+        Log.Info($"Optimal visit order calculated. Cost: {bestCost}");
+
+        return bestPermutation;
     }
 
     private static float CalculateOptimalVisitOrderCost(World world, MapLocation[] permutation) {

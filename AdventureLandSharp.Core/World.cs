@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -7,15 +8,14 @@ public class World {
     public World(GameData data) {
         _data = data;
         _maps = data.Maps
-            .Select<KeyValuePair<string, GameDataMap>, (string, GameDataMap, GameLevelGeometry)?>(x => 
+            .Select<KeyValuePair<string, GameDataMap>, (string Name, GameDataMap DataMap, GameLevelGeometry DataGeo)?>(x => 
                 data.Maps.TryGetValue(x.Key, out GameDataMap map) && 
                 data.Geometry.TryGetValue(x.Key, out GameLevelGeometry geo) ? 
                 (x.Key, map, geo) : null)
             .Where(x => x.HasValue)
-            .Select(x => new Map(x!.Value.Item1, data, x.Value.Item2, x.Value.Item3))
+            .Select(x => x!.Value)
+            .Select(x => new Map(x.Name, data, x.DataMap, x.DataGeo))
             .ToDictionary(map => map.Name);
-
-        _mapsGraph = new(_maps);
 
         _bankLocation = GetMap("bank").DefaultSpawn;
         _upgradeLocations = new(GetMap("main"), new(-204, -129));
@@ -32,6 +32,20 @@ public class World {
         _frankyLocation = new(GetMap("level2w"), new(-300, 150));
         _iceGolemLocation = new(GetMap("winterland"), new(820, 425));
         _abTestingLocation = GetMap("abtesting").DefaultSpawn;
+
+        // Add these locations as additional vertices to the graph.
+        _mapsGraph = new(_maps, extraVertices: [
+            _bankLocation,
+            _upgradeLocations,
+            _exchangeLocations,
+            .._potionLocations,
+            _scrollsLocation,
+            _gooBrawlLocation,
+            _bigAssCrabLocation,
+            _frankyLocation,
+            _iceGolemLocation,
+            _abTestingLocation
+        ]);
     }
 
     public GameData Data => _data;
@@ -42,9 +56,15 @@ public class World {
     public IEnumerable<IMapGraphEdge> FindRoute(MapLocation start, MapLocation goal, MapGraphPathSettings? graphSettings = null, MapGridPathSettings? gridSettings = null) {
         graphSettings ??= new();
         gridSettings ??= new();
-        List<IMapGraphEdge> edges = _mapsGraph.InterMap_Djikstra(start, goal, graphSettings.Value, gridSettings.Value);
-        MergeAdjacentIntraMapEdgesInPlace(edges, gridSettings.Value);
-        return edges;
+
+        (MapLocation, MapLocation, MapGraphPathSettings, MapGridPathSettings) key = (start, goal, graphSettings.Value, gridSettings.Value);
+        if (!_mapsGraphCache.TryGetValue(key, out List<IMapGraphEdge>? cachedEdges)) {
+            cachedEdges = _mapsGraph.InterMap_Djikstra(start, goal, graphSettings.Value, gridSettings.Value);
+            MergeAdjacentIntraMapEdgesInPlace(cachedEdges, gridSettings.Value);
+            _mapsGraphCache.TryAdd(key, cachedEdges);
+        }
+
+        return cachedEdges;
     }
 
     public Map GetMap(string mapName) => _maps[mapName];
@@ -65,6 +85,7 @@ public class World {
     private readonly GameData _data;
     private readonly Dictionary<string, Map> _maps;
     private readonly MapGraph _mapsGraph;
+    private readonly ConcurrentDictionary<(MapLocation, MapLocation, MapGraphPathSettings, MapGridPathSettings), List<IMapGraphEdge>> _mapsGraphCache = [];
 
     private readonly MapLocation _bankLocation;
     private readonly MapLocation _upgradeLocations;
@@ -103,7 +124,7 @@ public class World {
                 MapGraphEdgeIntraMap? mergedEdge = mergeStart.Map.FindPath(
                     mergeStart.Position,
                     mergeGoal.Position,
-                    settings with { MaxCost = 64 }
+                    settings with { MaxCost = 128 }
                 );
 
                 if (mergedEdge != null) {

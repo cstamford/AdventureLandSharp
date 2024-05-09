@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using AdventureLandSharp.Core.Util;
@@ -17,6 +18,9 @@ public class Socket : IDisposable {
     public event Action<Inbound.ServerInfo>? OnServerInfo;
     public event Action<Inbound.SkillTimeoutData>? OnSkillTimeout;
 
+    public MovingWindow<string> IncomingMessages_10Secs => _incomingWindow;
+    public MovingWindow<string> OutgoingMessages_10Secs => _outgoingWindow;
+
     public LocalPlayer Player => _player;
     public IEnumerable<Entity> Entities => _entities.Values;
     public IEnumerable<DropData> Drops => _drops.Values;
@@ -26,7 +30,7 @@ public class Socket : IDisposable {
         .Select(x => _entities[x])
         .Cast<Player>();
 
-    public Inbound.ServerInfo ServerInfo;
+    public Inbound.ServerInfo ServerInfo => _serverInfo;
 
     public Socket(
         GameData gameData,
@@ -83,7 +87,6 @@ public class Socket : IDisposable {
                     }
                 }
             });
-            
 
             RegisterRecv_NoQueue("disconnect_reason", Recv_NoQueue_DisconnectReason);
             RegisterRecv_NoQueue("limitdcreport", Recv_NoQueue_LimitDCReport);
@@ -116,6 +119,7 @@ public class Socket : IDisposable {
             _log.DebugVerbose(["SEND"], $"{name} {evt}");
         }
 
+        _outgoingWindow.Add(name);
         return _connection.EmitAsync(name, evt);
     }
 
@@ -151,7 +155,14 @@ public class Socket : IDisposable {
     private LocalPlayer _player = default!;
     private Inbound.ServerInfo _serverInfo = default!;
 
+    private readonly MovingWindow<string> _incomingWindow = new(TimeSpan.FromSeconds(10));
+    private readonly MovingWindow<string> _outgoingWindow = new(TimeSpan.FromSeconds(10));
+
+    private const float _minMoveHz = 1.0f / 5.0f;
+    private const float _maxMoveHz = 1.0f / 60.0f;
+
     private void Recv(Inbound.CorrectionData evt) {
+        _log.Warn($"Correction: {evt}");
         _player.On(evt);
     }
 
@@ -236,6 +247,7 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.ServerInfo evt) {
+        _serverInfo = evt;
         OnServerInfo?.Invoke(evt);
     }
 
@@ -280,6 +292,7 @@ public class Socket : IDisposable {
     private void Update_DrainRecvQueue() {
         while (_recvQueue.TryDequeue(out QueuedSocketData data)) {
             try {
+                _incomingWindow.Add(data.Event);
                 data.Handler(data.Data);
             } catch (Exception ex) {
                 _log.Error($"Error processing incoming message {data.Event}: {ex}");
@@ -311,10 +324,10 @@ public class Socket : IDisposable {
 
     private void Update_Tick() {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        float dt = MathF.Min((float)now.Subtract(_lastTick).TotalSeconds, 1.0f);
+        float dt = (float)now.Subtract(_lastTick).TotalSeconds;
         _lastTick = now;
 
-        _player.Tick(dt);
+        _player.Tick(MathF.Min(dt, _minMoveHz));
 
         foreach (Entity e in _entities.Values) {
             e.Tick(dt);
@@ -322,10 +335,13 @@ public class Socket : IDisposable {
     }
 
     public void Update_NetMovement() {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Vector2 distanceDiff = _player.GoalPosition - (_player.RemoteGoalPosition ?? _player.GoalPosition);
+        float distance = distanceDiff.Length();
+        float interval = float.Lerp(_minMoveHz, _maxMoveHz, MathF.Max(0, MathF.Min(1, distance / 25.0f)));
 
+        DateTimeOffset now = DateTimeOffset.UtcNow;
         TimeSpan timeSinceLastMove = now.Subtract(_lastNetMove);
-        TimeSpan moveInterval = TimeSpan.FromSeconds(1.0f / 10.0f);
+        TimeSpan moveInterval = TimeSpan.FromSeconds(interval);
 
         if (_player.GoalPosition != _player.RemoteGoalPosition && timeSinceLastMove >= moveInterval) {
             Emit<Outbound.Move>(new(

@@ -4,29 +4,6 @@ using System.Text.Json.Serialization;
 
 namespace AdventureLandSharp.Core;
 
-public static class GameConstants {
-    public const int VisionWidth = 700;
-    public const int VisionHeight = 500;
-    public const int BuyDist = 400;
-    public const int SellDist = 400;
-    public const int LootDist = 400;
-    public const int TradeDist = 400;
-    public const int BankDist = 400;
-    public const int AuraDist = 320;
-    public const int DoorDist = 112;
-    public const int TransporterDist = 160;
-    public const int PlayerWidth = 26;
-    public const int PlayerHeight = 36;
-    public const int DefaultEntityWidth = 24;
-    public const int DefaultEntityHeight = 24;
-
-    public const string GooBrawlEventName = "goobrawl";
-    public const string BigAssCrabEventName = "crabxx";
-    public const string FrankyEventName = "franky";
-    public const string IceGolemEventName = "icegolem";
-    public const string ABTestingEventName = "abtesting";
-}
-
 public readonly record struct GameLevelGeometry(
     [property: JsonPropertyName("default")] int Default,
     [property: JsonPropertyName("min_x")] int MinX,

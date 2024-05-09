@@ -216,6 +216,18 @@ public static class Vector2Extensions {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float Cost(this Vector2 world, MapGrid grid) => grid.Cost(world);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float CornerScore(this Vector2 world, Map map) => world.CornerScore(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float CornerScore(this Vector2 world, MapGrid grid) => grid.CornerScore(world);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCellData Data(this Vector2 world, Map map) => world.Data(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCellData Data(this Vector2 world, MapGrid grid) => grid.Data(world);
 }
 
 public static class MapGridCellExtensions {
@@ -236,6 +248,18 @@ public static class MapGridCellExtensions {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static float Cost(this MapGridCell cell, MapGrid grid) => grid.Cost(cell);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float CornerScore(this MapGridCell cell, Map map) => cell.CornerScore(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float CornerScore(this MapGridCell cell, MapGrid grid) => grid.CornerScore(cell);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCellData Data(this MapGridCell cell, Map map) => cell.Data(map.Grid);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MapGridCellData Data(this MapGridCell cell, MapGrid grid) => grid.Data(cell);
 }
 
 public static class MapLocationExtensions {

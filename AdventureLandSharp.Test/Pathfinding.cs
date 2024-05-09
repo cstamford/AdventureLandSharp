@@ -171,7 +171,7 @@ public class Pathfinding {
         Map gooBrawl = InitWorld.World.GetMap("goobrawl");
 
         MapGraphPathSettings settings = new MapGraphPathSettings() with { EnableEvents = [
-            (GameConstants.GooBrawlEventName, InitWorld.World.GooBrawlLocation)
+            (GameConstants.GooBrawlJoinName, InitWorld.World.GooBrawlLocation)
         ]};
         IEnumerable<IMapGraphEdge> pathIn = InitWorld.World.FindRoute(main.DefaultSpawn, gooBrawl.DefaultSpawn, settings);
         IEnumerable<IMapGraphEdge> pathOut = InitWorld.World.FindRoute(gooBrawl.DefaultSpawn, main.DefaultSpawn, settings);

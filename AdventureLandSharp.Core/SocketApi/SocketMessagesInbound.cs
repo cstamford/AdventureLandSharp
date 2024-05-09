@@ -91,7 +91,10 @@ public static class Inbound {
         [property: JsonPropertyName("source")] string Source,
         [property: JsonPropertyName("id")] string TargetId,
         [property: JsonPropertyName("damage")] double Damage,
-        [property: JsonPropertyName("kill")] bool Kill
+        [property: JsonPropertyName("crit")] double CritMultiplier,
+        [property: JsonPropertyName("lifesteal")] double LifestealHp,
+        [property: JsonPropertyName("kill")] bool Kill,
+        [property: JsonPropertyName("miss")] bool Miss
     );
 
     [InboundSocketMessage("invite")]
@@ -134,17 +137,52 @@ public static class Inbound {
         [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("lunarnewyear")] bool IsLunarNewYear,
         [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("valentines")] bool IsValentines,
 
-        [property: JsonPropertyName("crabxx")] ServerInfo_EventMonster? BigAssCrab,
-        [property: JsonPropertyName("dragold")] ServerInfo_EventMonster? Dragold,
-        [property: JsonPropertyName("franky")] ServerInfo_EventMonster? Franky,
-        [property: JsonPropertyName("grinch")] ServerInfo_EventMonster? Grinch,
-        [property: JsonPropertyName("icegolem")] ServerInfo_EventMonster? IceGolem,
-        [property: JsonPropertyName("mrgreen")] ServerInfo_EventMonster? MrGreen,
-        [property: JsonPropertyName("mrpumpkin")] ServerInfo_EventMonster? MrPumpkin,
-        [property: JsonPropertyName("pinkgoo")] ServerInfo_EventMonster? PinkGoo,
-        [property: JsonPropertyName("snowman")] ServerInfo_EventMonster? Snowman,
-        [property: JsonPropertyName("tiger")] ServerInfo_EventMonster? Tiger,
-        [property: JsonPropertyName("wabbit")] ServerInfo_EventMonster? Wabbit
+        [property: JsonPropertyName(GameConstants.ABTestingJoinName)] ServerInfo_Event? ABTesting,
+        [property: JsonPropertyName(GameConstants.GooBrawlJoinName)] ServerInfo_Event? GooBrawl,
+
+        [property: JsonPropertyName(GameConstants.BigAssCrabMobName)] ServerInfo_EventMonster? BigAssCrab,
+        [property: JsonPropertyName(GameConstants.DragoldMobName)] ServerInfo_EventMonster? Dragold,
+        [property: JsonPropertyName(GameConstants.FrankyMobName)] ServerInfo_EventMonster? Franky,
+        [property: JsonPropertyName(GameConstants.GrinchMobName)] ServerInfo_EventMonster? Grinch,
+        [property: JsonPropertyName(GameConstants.IceGolemMobName)] ServerInfo_EventMonster? IceGolem,
+        [property: JsonPropertyName(GameConstants.MrGreenMobName)] ServerInfo_EventMonster? MrGreen,
+        [property: JsonPropertyName(GameConstants.MrPumpkinMobName)] ServerInfo_EventMonster? MrPumpkin,
+        [property: JsonPropertyName(GameConstants.PinkGooMobName)] ServerInfo_EventMonster? PinkGoo,
+        [property: JsonPropertyName(GameConstants.SnowmanMobName)] ServerInfo_EventMonster? Snowman,
+        [property: JsonPropertyName(GameConstants.TigerMobName)] ServerInfo_EventMonster? Tiger,
+        [property: JsonPropertyName(GameConstants.WabbitMobName)] ServerInfo_EventMonster? Wabbit)
+    {
+        public readonly IEnumerable<(ServerInfo_EventMonsterType Type, ServerInfo_EventMonster? Data)> EventMonsters => [
+            (ServerInfo_EventMonsterType.BigAssCrab, BigAssCrab),
+            (ServerInfo_EventMonsterType.Dragold, Dragold),
+            (ServerInfo_EventMonsterType.Franky, Franky),
+            (ServerInfo_EventMonsterType.Grinch, Grinch),
+            (ServerInfo_EventMonsterType.IceGolem, IceGolem),
+            (ServerInfo_EventMonsterType.MrGreen, MrGreen),
+            (ServerInfo_EventMonsterType.MrPumpkin, MrPumpkin),
+            (ServerInfo_EventMonsterType.PinkGoo, PinkGoo),
+            (ServerInfo_EventMonsterType.Snowman, Snowman),
+            (ServerInfo_EventMonsterType.Tiger, Tiger),
+            (ServerInfo_EventMonsterType.Wabbit, Wabbit)
+        ];
+    }
+
+    public enum ServerInfo_EventMonsterType {
+        BigAssCrab,
+        Dragold,
+        Franky,
+        Grinch,
+        IceGolem,
+        MrGreen,
+        MrPumpkin,
+        PinkGoo,
+        Snowman,
+        Tiger,
+        Wabbit
+    }
+
+    public readonly record struct ServerInfo_Event(
+        [property: JsonPropertyName("end")] string EndTime
     );
 
     public readonly record struct ServerInfo_EventMonster(
@@ -153,7 +191,8 @@ public static class Inbound {
         [property: JsonPropertyName("x")] float MapX,
         [property: JsonPropertyName("y")] float MapY,
         [property: JsonPropertyName("hp")] int Health,
-        [property: JsonPropertyName("max_hp")] int MaxHealth
+        [property: JsonPropertyName("max_hp")] int MaxHealth,
+        [property: JsonPropertyName("end")] string EndTime
     );
 
     public readonly record struct ServerInfo_Schedule(
@@ -353,15 +392,15 @@ public readonly record struct PlayerBank(
         _ => throw new ArgumentOutOfRangeException(nameof(tab))
     };
 
-    public IEnumerable<Item?[]?> AllTabs => Enumerable.Range(0, 48).Select(GetTab);
-    public IEnumerable<(int Index, Item?[] Tab)> ValidTabs => AllTabs
+    [JsonIgnore] public IEnumerable<Item?[]?> AllTabs => Enumerable.Range(0, 48).Select(GetTab);
+    [JsonIgnore] public IEnumerable<(int Index, Item?[] Tab)> ValidTabs => AllTabs
         .Select((tab, i) => (i, tab))
         .Where(x => x.tab != null)
         .Select(x => (x.i, x.tab!)
     );
 
-    public int SlotsFree => ValidTabs.Sum(tab => GetFreeSlotsInTab(tab.Tab));
-    public int SlotsUsed => 42 * ValidTabs.Count() - SlotsFree;
+    [JsonIgnore] public int SlotsFree => ValidTabs.Sum(tab => GetFreeSlotsInTab(tab.Tab));
+    [JsonIgnore] public int SlotsUsed => 42 * ValidTabs.Count() - SlotsFree;
 
     public static string GetMapNameForTabIdx(int tab) {
         if (tab <= 7) {
@@ -403,74 +442,78 @@ public readonly record struct PlayerInventory(
 
 public readonly record struct StatusEffect(
     [property: JsonPropertyName("f")] string Owner,
-    [property: JsonPropertyName("ms")] float Duration
-);
+    [property: JsonPropertyName("ms")] float MillisecondsRemaining
+) {
+    public TimeSpan Duration => TimeSpan.FromMilliseconds(MillisecondsRemaining);
+}
 
-public readonly record struct StatusEffects(
-    [property: JsonPropertyName("authfail")] StatusEffect? AuthFail,
-    [property: JsonPropertyName("blink")] StatusEffect? Blink,
-    [property: JsonPropertyName("block")] StatusEffect? Block,
-    [property: JsonPropertyName("burned")] StatusEffect? Burned,
-    [property: JsonPropertyName("charging")] StatusEffect? Charging,
-    [property: JsonPropertyName("charmed")] StatusEffect? Charmed,
-    [property: JsonPropertyName("cursed")] StatusEffect? Cursed,
-    [property: JsonPropertyName("dash")] StatusEffect? Dash,
-    [property: JsonPropertyName("dampened")] StatusEffect? Dampened,
-    [property: JsonPropertyName("darkblessing")] StatusEffect? DarkBlessing,
-    [property: JsonPropertyName("deepfreezed")] StatusEffect? DeepFreezed,
-    [property: JsonPropertyName("eburn")] StatusEffect? EBurn,
-    [property: JsonPropertyName("eheal")] StatusEffect? EHeal,
-    [property: JsonPropertyName("energized")] StatusEffect? Energized,
-    [property: JsonPropertyName("easterluck")] StatusEffect? EasterLuck,
-    [property: JsonPropertyName("fingered")] StatusEffect? Fingered,
-    [property: JsonPropertyName("fishing")] StatusEffect? Fishing,
-    [property: JsonPropertyName("frozen")] StatusEffect? Frozen,
-    [property: JsonPropertyName("fullguard")] StatusEffect? FullGuard,
-    [property: JsonPropertyName("fullguardx")] StatusEffect? FullGuardX,
-    [property: JsonPropertyName("halloween0")] StatusEffect? Halloween0,
-    [property: JsonPropertyName("halloween1")] StatusEffect? Halloween1,
-    [property: JsonPropertyName("halloween2")] StatusEffect? Halloween2,
-    [property: JsonPropertyName("hardshell")] StatusEffect? HardShell,
-    [property: JsonPropertyName("holidayspirit")] StatusEffect? HolidaySpirit,
-    [property: JsonPropertyName("hopsickness")] StatusEffect? HopSickness,
-    [property: JsonPropertyName("invis")] StatusEffect? Invis,
-    [property: JsonPropertyName("invincible")] StatusEffect? Invincible,
-    [property: JsonPropertyName("licenced")] StatusEffect? Licenced,
-    [property: JsonPropertyName("marked")] StatusEffect? Marked,
-    [property: JsonPropertyName("massproduction")] StatusEffect? MassProduction,
-    [property: JsonPropertyName("massproductionpp")] StatusEffect? MassProductionPP,
-    [property: JsonPropertyName("mcourage")] StatusEffect? MCourage,
-    [property: JsonPropertyName("mfrenzy")] StatusEffect? MFrenzy,
-    [property: JsonPropertyName("mining")] StatusEffect? Mining,
-    [property: JsonPropertyName("mlifesteal")] StatusEffect? MLifesteal,
-    [property: JsonPropertyName("mluck")] StatusEffect? MLuck,
-    [property: JsonPropertyName("monsterhunt")] StatusEffect? MonsterHunt,
-    [property: JsonPropertyName("mshield")] StatusEffect? MShield,
-    [property: JsonPropertyName("newcomersblessing")] StatusEffect? NewcomersBlessing,
-    [property: JsonPropertyName("notverified")] StatusEffect? NotVerified,
-    [property: JsonPropertyName("penalty_cd")] StatusEffect? PenaltyCD,
-    [property: JsonPropertyName("phasedout")] StatusEffect? PhasedOut,
-    [property: JsonPropertyName("pickpocket")] StatusEffect? Pickpocket,
-    [property: JsonPropertyName("poisoned")] StatusEffect? Poisoned,
-    [property: JsonPropertyName("poisonous")] StatusEffect? Poisonous,
-    [property: JsonPropertyName("power")] StatusEffect? Power,
-    [property: JsonPropertyName("purifier")] StatusEffect? Purifier,
-    [property: JsonPropertyName("reflection")] StatusEffect? Reflection,
-    [property: JsonPropertyName("rspeed")] StatusEffect? RSpeed,
-    [property: JsonPropertyName("sanguine")] StatusEffect? Sanguine,
-    [property: JsonPropertyName("shocked")] StatusEffect? Shocked,
-    [property: JsonPropertyName("sleeping")] StatusEffect? Sleeping,
-    [property: JsonPropertyName("slowness")] StatusEffect? Slowness,
-    [property: JsonPropertyName("stack")] StatusEffect? Stack,
-    [property: JsonPropertyName("stoned")] StatusEffect? Stoned,
-    [property: JsonPropertyName("stunned")] StatusEffect? Stunned,
-    [property: JsonPropertyName("sugarrush")] StatusEffect? SugarRush,
-    [property: JsonPropertyName("town")] StatusEffect? Town,
-    [property: JsonPropertyName("tangled")] StatusEffect? Tangled,
-    [property: JsonPropertyName("withdrawal")] StatusEffect? Withdrawal,
-    [property: JsonPropertyName("woven")] StatusEffect? Woven,
-    [property: JsonPropertyName("warcry")] StatusEffect? WarCry,
-    [property: JsonPropertyName("weakness")] StatusEffect? Weakness,
-    [property: JsonPropertyName("xpower")] StatusEffect? XPower,
-    [property: JsonPropertyName("xshotted")] StatusEffect? XShotted
-);
+public readonly record struct StatusEffects(Dictionary<string, StatusEffect> Effects) {
+    public override string ToString() => string.Join(", ", Effects.Keys);
+
+    public StatusEffect? AuthFail => Effects.GetValueOrDefault("authfail");
+    public StatusEffect? Blink => Effects.TryGetValue("blink", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Block => Effects.TryGetValue("block", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Burned => Effects.TryGetValue("burned", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Charging => Effects.TryGetValue("charging", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Charmed => Effects.TryGetValue("charmed", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Cursed =>  Effects.TryGetValue("cursed", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Dash => Effects.TryGetValue("dash", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Dampened => Effects.TryGetValue("dampened", out StatusEffect eff) ? eff : null;
+    public StatusEffect? DarkBlessing => Effects.TryGetValue("darkblessing", out StatusEffect eff) ? eff : null;
+    public StatusEffect? DeepFreezed => Effects.TryGetValue("deepfreezed", out StatusEffect eff) ? eff : null;
+    public StatusEffect? EBurn => Effects.TryGetValue("eburn", out StatusEffect eff) ? eff : null;
+    public StatusEffect? EHeal => Effects.TryGetValue("eheal", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Energized => Effects.TryGetValue("energized", out StatusEffect eff) ? eff : null;
+    public StatusEffect? EasterLuck => Effects.TryGetValue("easterluck", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Fingered => Effects.TryGetValue("fingered", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Fishing => Effects.TryGetValue("fishing", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Frozen => Effects.TryGetValue("frozen", out StatusEffect eff) ? eff : null;
+    public StatusEffect? FullGuard => Effects.TryGetValue("fullguard", out StatusEffect eff) ? eff : null;
+    public StatusEffect? FullGuardX => Effects.TryGetValue("fullguardx", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Halloween0 => Effects.TryGetValue("halloween0", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Halloween1 => Effects.TryGetValue("halloween1", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Halloween2 => Effects.TryGetValue("halloween2", out StatusEffect eff) ? eff : null;
+    public StatusEffect? HardShell => Effects.TryGetValue("hardshell", out StatusEffect eff) ? eff : null;
+    public StatusEffect? HolidaySpirit => Effects.TryGetValue("holidayspirit", out StatusEffect eff) ? eff : null;
+    public StatusEffect? HopSickness => Effects.TryGetValue("hopsickness", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Invis => Effects.TryGetValue("invis", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Invincible => Effects.TryGetValue("invincible", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Licenced => Effects.TryGetValue("licenced", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Marked => Effects.TryGetValue("marked", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MassProduction => Effects.TryGetValue("massproduction", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MassProductionPP => Effects.TryGetValue("massproductionpp", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MCourage => Effects.TryGetValue("mcourage", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MFrenzy => Effects.TryGetValue("mfrenzy", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Mining => Effects.TryGetValue("mining", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MLifesteal => Effects.TryGetValue("mlifesteal", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MLuck => Effects.TryGetValue("mluck", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MonsterHunt => Effects.TryGetValue("monsterhunt", out StatusEffect eff) ? eff : null;
+    public StatusEffect? MShield => Effects.TryGetValue("mshield", out StatusEffect eff) ? eff : null;
+    public StatusEffect? NewcomersBlessing => Effects.TryGetValue("newcomersblessing", out StatusEffect eff) ? eff : null;
+    public StatusEffect? NotVerified => Effects.TryGetValue("notverified", out StatusEffect eff) ? eff : null;
+    public StatusEffect? PenaltyCD => Effects.TryGetValue("penalty_cd", out StatusEffect eff) ? eff : null;
+    public StatusEffect? PhasedOut => Effects.TryGetValue("phasedout", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Pickpocket => Effects.TryGetValue("pickpocket", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Poisoned => Effects.TryGetValue("poisoned", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Poisonous => Effects.TryGetValue("poisonous", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Power => Effects.TryGetValue("power", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Purifier => Effects.TryGetValue("purifier", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Reflection => Effects.TryGetValue("reflection", out StatusEffect eff) ? eff : null;
+    public StatusEffect? RSpeed => Effects.TryGetValue("rspeed", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Sanguine => Effects.TryGetValue("sanguine", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Shocked => Effects.TryGetValue("shocked", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Sleeping => Effects.TryGetValue("sleeping", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Slowness => Effects.TryGetValue("slowness", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Stack => Effects.TryGetValue("stack", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Stoned => Effects.TryGetValue("stoned", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Stunned => Effects.TryGetValue("stunned", out StatusEffect eff) ? eff : null;
+    public StatusEffect? SugarRush => Effects.TryGetValue("sugarrush", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Town => Effects.TryGetValue("town", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Tangled => Effects.TryGetValue("tangled", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Withdrawal => Effects.TryGetValue("withdrawal", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Woven => Effects.TryGetValue("woven", out StatusEffect eff) ? eff : null;
+    public StatusEffect? WarCry => Effects.TryGetValue("warcry", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Weakness => Effects.TryGetValue("weakness", out StatusEffect eff) ? eff : null;
+    public StatusEffect? XPower => Effects.TryGetValue("xpower", out StatusEffect eff) ? eff : null;
+    public StatusEffect? XShotted => Effects.TryGetValue("xshotted", out StatusEffect eff) ? eff : null;
+}
