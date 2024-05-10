@@ -138,6 +138,11 @@ public class Socket : IDisposable {
         Update_NetMovement();
     }
 
+    public void FlushAndClearMovement() {
+        Update_NetMovement_SendUpdate();
+        _player.MovementPlan = null;
+    }
+
     private readonly GameData _gameData;
     private readonly Connection _connection;
     private readonly Logger _log;
@@ -334,7 +339,7 @@ public class Socket : IDisposable {
         }
     }
 
-    public void Update_NetMovement() {
+    private void Update_NetMovement() {
         Vector2 distanceDiff = _player.GoalPosition - (_player.RemoteGoalPosition ?? _player.GoalPosition);
         float distance = distanceDiff.Length();
         float interval = float.Lerp(_minMoveHz, _maxMoveHz, MathF.Max(0, MathF.Min(1, distance / 25.0f)));
@@ -344,16 +349,20 @@ public class Socket : IDisposable {
         TimeSpan moveInterval = TimeSpan.FromSeconds(interval);
 
         if (_player.GoalPosition != _player.RemoteGoalPosition && timeSinceLastMove >= moveInterval) {
-            Emit<Outbound.Move>(new(
-                X: _player.Position.X,
-                Y: _player.Position.Y,
-                TargetX: _player.GoalPosition.X,
-                TargetY: _player.GoalPosition.Y,
-                MapId: _player.MapId
-            ));
-
-            _player.RemoteGoalPosition = _player.GoalPosition;
-            _lastNetMove = now;
+            Update_NetMovement_SendUpdate();
         }
+    }
+
+    private void Update_NetMovement_SendUpdate() {
+        Emit<Outbound.Move>(new(
+            X: _player.Position.X,
+            Y: _player.Position.Y,
+            TargetX: _player.GoalPosition.X,
+            TargetY: _player.GoalPosition.Y,
+            MapId: _player.MapId
+        ));
+
+        _player.RemoteGoalPosition = _player.GoalPosition;
+        _lastNetMove = DateTimeOffset.UtcNow;
     }
 }

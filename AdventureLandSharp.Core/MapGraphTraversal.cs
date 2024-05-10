@@ -7,16 +7,19 @@ using AdventureLandSharp.Core.Util;
 namespace AdventureLandSharp;
 
 public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, MapLocation end) {
+    public override string ToString() => $"End={End} Finished={Finished} CurrentEdge={CurrentEdge} PreviousEdge={PreviousEdge} NextEdge={NextEdge}";
+
     public MapLocation End => end;
     public bool Finished => _edges.Count == 0 && (!CurrentEdgeValid || CurrentEdgeFinished);
     public IMapGraphEdge? CurrentEdge => _edge;
     public IMapGraphEdge? PreviousEdge => _lastEdge;
+    public IMapGraphEdge? NextEdge => _edges.TryPeek(out IMapGraphEdge? nextEdge) ? nextEdge : null;
 
     public void Update() {
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         while (!Finished && (!CurrentEdgeValid || CurrentEdgeFinished)) {
-            _log.Debug($"Progressing to next edge. CurrentEdge={CurrentEdge}, CurrentEdgeValid={CurrentEdgeValid}, CurrentEdgeFinished={CurrentEdgeFinished}.");
+            _log.Debug($"Changing edge! Pos={Player.Position}, State={this}");
             _lastEdge = _edge;
             _edge = _edges.Dequeue();
             _edgeUpdate = now;
@@ -58,10 +61,15 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private DateTimeOffset NextEdgeUpdate(DateTimeOffset now) => _edge switch {
         MapGraphEdgeInterMap or MapGraphEdgeJoin => now.Add(TimeSpan.FromSeconds(1.0)),
         MapGraphEdgeTeleport => now.Add(TimeSpan.FromSeconds(4.5)),
-        _ => DateTimeOffset.MinValue
+        _ => DateTimeOffset.MaxValue
     };
 
     private void ProcessEdge() {
+        if (_edge is not MapGraphEdgeIntraMap) {
+            // Flush the movement so that we don't introduce race conditions on the other side of a transition/teleport/etc.
+            socket.FlushAndClearMovement();
+        }
+
         if (_edge is MapGraphEdgeInterMap interMap) {
             _log.Debug($"{interMap}");
             if (interMap.Type is MapConnectionType.Door or MapConnectionType.Transporter) {
@@ -75,22 +83,15 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             _log.Debug($"{join}");
             socket.Emit<Outbound.Join>(new(join.JoinEventName));
         } else if (_edge is MapGraphEdgeIntraMap intraMap) {
-            if (Player.MovementPlan?.Finished ?? true) {
-                intraMap = ProcessEdge_MapTransitionDistanceSkip(intraMap);
-                intraMap = ProcessEdge_LineOfSightStartSkip(intraMap);
-                Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
-                _edge = intraMap;
-            }
+            intraMap = ProcessEdge_MapTransitionDistanceSkip(intraMap);
+            intraMap = ProcessEdge_LineOfSightStartSkip(intraMap);
+            Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
+            _edge = intraMap;
         } else if (_edge is MapGraphEdgeTeleport tp) {
             _log.Debug($"{tp}");
             socket.Emit<Outbound.Town>(new());
         } else {
             throw new NotImplementedException($"Unknown edge type: {_edge}");
-        }
-
-        if (_edge is not MapGraphEdgeIntraMap) {
-            // Clear the movement plan so that we don't introduce race conditions on the other side of a transition/teleport/etc.
-            Player.MovementPlan = null;
         }
     }
 
@@ -98,10 +99,9 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     // This allows us to skip walking right to the end of the edge to use e.g. a door which has a useable distance.
     private MapGraphEdgeIntraMap ProcessEdge_MapTransitionDistanceSkip(MapGraphEdgeIntraMap edge) {
         if (_edges.TryPeek(out IMapGraphEdge? nextEdge) && nextEdge is MapGraphEdgeInterMap nextEdgeInter) {
-            float buffer = Math.Max(GameConstants.PlayerWidth, GameConstants.PlayerHeight) + MapGrid.CellWorldEpsilon;
             float cuttableDistance = nextEdgeInter.Type switch {
-                MapConnectionType.Door => GameConstants.DoorDist - buffer,
-                MapConnectionType.Transporter => GameConstants.TransporterDist - buffer,
+                MapConnectionType.Door => GameConstants.DoorDist - MapGrid.CellWorldEpsilon*2,
+                MapConnectionType.Transporter => GameConstants.TransporterDist - MapGrid.CellWorldEpsilon*2,
                 _ => 0.0f
             };
 
@@ -118,6 +118,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
                 }
 
                 Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
+                Debug.Assert(newLocation.SimpleDist(nextEdgeInter.Source.Position) < cuttableDistance);
                 return edge with { Dest = edge.Dest with { Position = newLocation } };
             }
         }
