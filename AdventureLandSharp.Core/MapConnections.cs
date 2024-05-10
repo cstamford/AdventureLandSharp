@@ -42,11 +42,13 @@ public class MapConnections(string mapName, GameData gameData, GameDataMap mapDa
             }
 
             if (gameData.Maps.TryGetValue(destMap, out GameDataMap destination)) {
+                long sourceSpawnId = door[6].GetInt64();
                 long destSpawnId = door[5].GetInt64();
+                double[] sourcePosition = mapData.SpawnPositions[sourceSpawnId];
                 double[] destinationPosition = destination.SpawnPositions[destSpawnId];
                 connections.Add(new(
                     MapConnectionType.Door,
-                    mapName, (float)door[0].GetDouble(), (float)door[1].GetDouble(),
+                    mapName, (float)sourcePosition[0], (float)sourcePosition[1],
                     destMap, (float)destinationPosition[0], (float)destinationPosition[1], destSpawnId
                 ));
             }
