@@ -64,9 +64,9 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
     public Vector2 Goal => _clickAheadPoint;
     public Vector2 OriginalGoal => _pathMovementPlan.Goal;
 
-    public void Update(double dt, double speed) { 
+    public void Update(double dt, double speed) {
         _pathMovementPlan.Update(dt, speed);
-        _clickAheadPoint = Path.Count > 0 ? CalculateClickAheadPoint(OriginalGoal, (float)speed) : OriginalGoal;
+        _clickAheadPoint = Path.Count > 1 ? CalculateClickAheadPoint(OriginalGoal, (float)speed) : OriginalGoal;
     }
 
     private readonly PathMovementPlan _pathMovementPlan = new(start, path);
@@ -76,7 +76,20 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
     private Vector2 CalculateClickAheadPoint(Vector2 target, float speed) {
         Vector2 direction = Vector2.Normalize(target - Position);
         Vector2 clickAheadTarget = target + direction * speed * (float)_clickAheadLatency.TotalSeconds;
-        MapGridLineOfSight los = map.Grid.LineOfSight(Position.Grid(map), clickAheadTarget.Grid(map));
-        return los.OccludedAt?.World(map) ?? clickAheadTarget;
+
+        MapGridCell furthestValid = clickAheadTarget.Grid(map);
+        MapGridLineOfSight los = MapGrid.LineOfSight(
+            Position.Grid(map), 
+            clickAheadTarget.Grid(map), c => {
+                bool walkable = c.Data(map).IsWalkable;
+                if (walkable) {
+                    furthestValid = c;
+                }
+                return !walkable;
+            },
+            maxResults: null
+        );
+    
+        return furthestValid.World(map);
     }
 }

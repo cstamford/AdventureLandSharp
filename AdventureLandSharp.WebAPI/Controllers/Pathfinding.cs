@@ -24,19 +24,21 @@ public class PathfindingController(World world) : ControllerBase {
     public IActionResult Grid(string map) {
         if (world.TryGetMap(map, out Map mapObj)) {
             MapGrid grid = mapObj.Grid;
+            MapGridTerrain terrain = grid.Terrain;
 
             List<bool> walkable = [];
             List<float> cost = [];
 
-            for (int y = 0; y < grid.Height; ++y) {
-                for (int x = 0; x < grid.Width; ++x) {
+            for (int y = 0; y < terrain.Height; ++y) {
+                for (int x = 0; x < terrain.Width; ++x) {
                     MapGridCell cell = new(x, y);
-                    walkable.Add(cell.IsWalkable(grid));
-                    cost.Add(cell.Cost(grid));
+                    MapGridCellData cellData = terrain[cell];
+                    walkable.Add(cellData.IsWalkable);
+                    cost.Add(cellData.Cost);
                 }
             }
 
-            return Ok(new GridResponse(MapGrid.CellSize, grid.Width, grid.Height, walkable, cost));
+            return Ok(new GridResponse(MapGridTerrain.CellSize, terrain.Width, terrain.Height, walkable, cost));
         }
         return BadRequest($"Map '{map}' not found.");
     }

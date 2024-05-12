@@ -17,7 +17,7 @@ public class BasicSession(World world, ConnectionSettings settings, CharacterFac
 
     public void EnterUpdateLoop() {
         while (!_disposed) {
-            _socket = new(_world.Data, _settings);
+            _socket = new(_world, _settings);
 
             while (!_disposed && !_socket.Connected) {
                 _socket.Update();
@@ -61,11 +61,11 @@ public class BasicSession(World world, ConnectionSettings settings, CharacterFac
         while (!_disposed && _socket.Connected) {
             _socket.Update();
 
-            if (_gui != null && !_gui.Update()) {
+            if (!character.Update()) {
                 break;
             }
 
-            if (!character.Update()) {
+            if (_gui != null && !_gui.Update()) {
                 break;
             }
 

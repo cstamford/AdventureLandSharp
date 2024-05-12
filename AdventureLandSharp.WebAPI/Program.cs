@@ -5,7 +5,7 @@ using AdventureLandSharp.Core.Util;
 using AdventureLandSharp.WebAPI;
 
 GameData gameData = await Api.FetchGameDataAsync(new("http://localhost:8083"));
-World world = new(gameData);
+World world = new(gameData, Utils.LoadSmapData());
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

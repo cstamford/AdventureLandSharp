@@ -11,9 +11,12 @@ namespace AdventureLandSharp.Core.SocketApi;
 public class Socket : IDisposable {
     public bool Connected => _connection.Connected && _player.Id != null;
 
+    public event Action<Inbound.CorrectionData>? OnCorrection;
+    public event Action<Inbound.DisappearData>? OnDisappear;
     public event Action<JsonElement>? OnGameResponse;
     public event Action<Inbound.HitData>? OnHit;
     public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
+    public event Action<Inbound.NewMapData>? OnNewMap;
     public event Action<Inbound.PartyRequestData>? OnPartyRequest;
     public event Action<Inbound.ServerInfo>? OnServerInfo;
     public event Action<Inbound.SkillTimeoutData>? OnSkillTimeout;
@@ -32,12 +35,9 @@ public class Socket : IDisposable {
 
     public Inbound.ServerInfo ServerInfo => _serverInfo;
 
-    public Socket(
-        GameData gameData,
-        ConnectionSettings settings)
-    {
+    public Socket(World world, ConnectionSettings settings) {
         _log = new(settings.Character.Name, "SOCKET");
-        _gameData = gameData;
+        _world = world;
         _connection = new(settings);
 
         HashSet<string> handledEvents = [];
@@ -138,12 +138,7 @@ public class Socket : IDisposable {
         Update_NetMovement();
     }
 
-    public void FlushAndClearMovement() {
-        Update_NetMovement_SendUpdate();
-        _player.MovementPlan = null;
-    }
-
-    private readonly GameData _gameData;
+    private readonly World _world;
     private readonly Connection _connection;
     private readonly Logger _log;
 
@@ -167,7 +162,7 @@ public class Socket : IDisposable {
     private const float _maxMoveHz = 1.0f / 60.0f;
 
     private void Recv(Inbound.CorrectionData evt) {
-        _log.Warn($"Correction: {evt}");
+        OnCorrection?.Invoke(evt);
         _player.On(evt);
     }
 
@@ -180,6 +175,7 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.DisappearData evt) {
+        OnDisappear?.Invoke(evt);
         _entities.Remove(evt.Id);
     }
 
@@ -224,8 +220,8 @@ public class Socket : IDisposable {
                 e.Update(monster);
             } else {
                 string type = monster.GetString("type");
-                GameDataMonster monsterDef = _gameData.Monsters[type];
-                _entities.Add(id, new Monster(monster, monsterDef, _gameData.GetMonsterSize(type)));
+                GameDataMonster monsterDef = _world.Data.Monsters[type];
+                _entities.Add(id, new Monster(monster, monsterDef, _world.Data.GetMonsterSize(type)));
             }
         }
     }
@@ -239,6 +235,7 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.NewMapData evt) {
+        OnNewMap?.Invoke(evt);
         _player.On(evt);
         Recv(evt.Entities);
     }
@@ -354,6 +351,14 @@ public class Socket : IDisposable {
     }
 
     private void Update_NetMovement_SendUpdate() {
+        Map map = _world.GetMap(_player.MapName);
+
+        // Don't send a message if we'd do so on an invalid tile, as it's guaranteed to get us jailed.
+        // Let's just hope that we can move past it quickly.
+        if (!_player.Position.RpHash(map).IsValid || !_player.GoalPosition.RpHash(map).IsValid) {
+            return;
+        }
+
         Emit<Outbound.Move>(new(
             X: _player.Position.X,
             Y: _player.Position.Y,

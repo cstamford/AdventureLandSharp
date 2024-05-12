@@ -9,8 +9,6 @@ public class FastPriorityQueue<T>() where T : struct {
         _size = 0;
         _elements.Clear();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void Enqueue(T item, float priority) {
         if (_size == _elements.Count) {
             _elements.Add((priority, item));
@@ -21,7 +19,6 @@ public class FastPriorityQueue<T>() where T : struct {
         SiftUp(_size++);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public bool TryDequeue(out T item, out float priority) {
         if (_size == 0) {
             item = default;

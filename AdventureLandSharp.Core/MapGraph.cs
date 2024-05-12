@@ -25,8 +25,10 @@ public readonly record struct MapGraphEdgeInterMap(MapLocation Source, MapLocati
     public float Cost => 50;
 }
 
-public readonly record struct MapGraphEdgeIntraMap(MapLocation Source, MapLocation Dest, List<Vector2> Path, float Cost) : IMapGraphEdge {
-    public override readonly string ToString() => $"Traversing {Source.Map.Name} from {Source.Position} to {Dest.Position} with cost {Cost}.";
+public readonly record struct MapGraphEdgeIntraMap(Vector2 SourcePos, Vector2 DestPos, Map Map, List<Vector2> Path, float Cost) : IMapGraphEdge {
+    public override readonly string ToString() => $"Traversing {Map.Name} from {SourcePos} to {DestPos} with cost {Cost}.";
+    public MapLocation Source => new(Map, SourcePos);
+    public MapLocation Dest => new(Map, DestPos);
 }
 
 public readonly record struct MapGraphEdgeTeleport(MapLocation Source, MapLocation Dest) : IMapGraphEdge {
@@ -107,7 +109,7 @@ public class MapGraph {
             // This is because if it isn't, it's very unlikely to be useful, and costs a lot of time.
             // There are niche cases where it is useful, but they are few and far between.
             float estimatedDistanceForRamp = start.Position.SimpleDist(rampOnPosition) + rampOnPosition.SimpleDist(goal.Position);
-            needsRamp = !directPath.HasValue || estimatedDistanceForRamp < directPath.Value.Cost * MapGrid.CellSize;
+            needsRamp = !directPath.HasValue || estimatedDistanceForRamp < directPath.Value.Cost * MapGridTerrain.CellSize;
         }
 
         MapGraphEdgeIntraMap? startToRampOn = null;

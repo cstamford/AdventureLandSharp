@@ -4,7 +4,7 @@ using AdventureLandSharp.Core.HttpApi;
 using AdventureLandSharp.Core.Util;
 
 GameData data = await Api.FetchGameDataAsync(Utils.ApiAddress);
-World world = new(data);
+World world = new(data, Utils.LoadSmapData());
 
 MapLocation[] route = Utils.CalculateOptimalVisitOrder(world, [
     world.GetMap("main").FishingSpot!.Value,

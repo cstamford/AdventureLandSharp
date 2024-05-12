@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AdventureLandSharp.Core.HttpApi;
 
 namespace AdventureLandSharp.Core.Util;
@@ -13,6 +14,20 @@ public static class Utils {
     public const bool TargetLocalServer = InDebugMode ? true : false;
 
     public static ApiAddress ApiAddress => new(TargetLocalServer ? "http://localhost:8083" : "http://adventure.land");
+
+    public static Dictionary<string, GameDataSmap> LoadSmapData() {
+        try {
+            return JsonSerializer.Deserialize<JsonElement>(File.ReadAllText("smap_data.json"))
+                .EnumerateObject()
+                .Where(x => x.Value.ValueKind == JsonValueKind.Object)
+                .ToDictionary(x => x.Name, x => new GameDataSmap(
+                    x.Value.EnumerateObject().ToDictionary(y => y.Name, y => y.Value.GetUInt16())));
+        } catch (Exception ex) {
+            Log.Warn($"Failed to read smap_data.json due to {ex}");
+        }
+
+        return [];
+    }
 
     public static MapLocation[] GetMapLocationsForSpawn(World world, string mapName, string mobName) => world.Data.Maps[mapName].Monsters!
         .First(x => x.Type == mobName)

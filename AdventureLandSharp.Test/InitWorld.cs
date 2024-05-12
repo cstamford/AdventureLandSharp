@@ -11,7 +11,7 @@ public static class InitWorld {
     [AssemblyInitialize()]
     public static async Task Init(TestContext testContext) {
         GameData data = await Api.FetchGameDataAsync(Utils.ApiAddress);
-        World = new(data);
+        World = new(data, Utils.LoadSmapData());
     }
 
     [AssemblyCleanup]

@@ -5,17 +5,16 @@ using System.Runtime.CompilerServices;
 namespace AdventureLandSharp.Core;
 
 public class World {
-    public World(GameData data) {
+    public World(GameData data, Dictionary<string, GameDataSmap> smapData) {
         _data = data;
         _maps = data.Maps
-            .Select<KeyValuePair<string, GameDataMap>, (string Name, GameDataMap DataMap, GameLevelGeometry DataGeo)?>(x => 
+            .Select(x => 
                 data.Maps.TryGetValue(x.Key, out GameDataMap map) && 
                 data.Geometry.TryGetValue(x.Key, out GameLevelGeometry geo) ? 
-                (x.Key, map, geo) : null)
-            .Where(x => x.HasValue)
-            .Select(x => x!.Value)
-            .Select(x => new Map(x.Name, data, x.DataMap, x.DataGeo))
-            .ToDictionary(map => map.Name);
+                    new Map(x.Key, data, map, geo, smapData.GetValueOrDefault(x.Key)) : 
+                    null)
+            .Where(x => x != null)
+            .ToDictionary(k => k!.Name, v => v!);
 
         _bankLocation = GetMap("bank").DefaultSpawn;
         _upgradeLocations = new(GetMap("main"), new(-204, -129));

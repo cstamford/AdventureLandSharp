@@ -12,7 +12,7 @@ public enum LogLevel {
 public static class Log {
     static Log() {
         try {
-            _logLevel = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("ADVENTURELAND_LOG_LEVEL") ?? "Debug");
+            _logLevel = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("ADVENTURELAND_LOG_LEVEL") ?? "DebugVerbose");
             _logLevelConsole = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("ADVENTURELAND_LOG_LEVEL_CONSOLE") ?? "Info");
             _logDir = Environment.GetEnvironmentVariable("ADVENTURELAND_LOG_DIR")!;
             _logPath = Path.Combine(_logDir, $"log_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");

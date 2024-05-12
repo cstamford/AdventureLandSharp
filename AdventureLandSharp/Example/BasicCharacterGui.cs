@@ -1,7 +1,6 @@
 using AdventureLandSharp.Core;
 using AdventureLandSharp.Core.SocketApi;
 using AdventureLandSharp.Interfaces;
-using AdventureLandSharp.Core.Util;
 
 namespace AdventureLandSharp.Example;
 
@@ -47,7 +46,18 @@ public class BasicCharacterGui : ISessionGui {
 
     protected virtual void Draw_2_Background() {
         Map map = _world.GetMap(Character.Entity.MapName);
-        DrawMapGrid(map, _camBounds);
+        DrawMapGridBackground(map, _camBounds);
+
+        if (map.Smap != null) {
+            if (_smapDraw) {
+                DrawSmap(map, _camBounds);
+            }
+
+            if (_smapCompareRpToP) {
+                DrawSmapRpVsP(map, _camBounds);
+            }
+        }
+
         DrawMapBoundaries(map);
         DrawMapConnections(map);
     }
@@ -87,10 +97,13 @@ public class BasicCharacterGui : ISessionGui {
     protected World World => _world;
     protected Rectangle CamBounds => _camBounds;
 
-    private readonly World _world;
-    private readonly ICharacter _character;
     private const int _width = 1920;
     private const int _height = 1080;
+    private const bool _smapDraw = false;
+    private const bool _smapCompareRpToP = false;
+
+    private readonly World _world;
+    private readonly ICharacter _character;
     private Camera2D _cam = new(Vector2.Zero, Vector2.Zero, 0.0f, 1.0f);
     private Rectangle _camBounds = new(0, 0, _width, _height);
 
@@ -106,30 +119,78 @@ public class BasicCharacterGui : ISessionGui {
         }
     }
 
-    private static void DrawMapGrid(Map map, Rectangle bounds) {
-        float minCost = map.Grid.Terrain.ToEnumerable().Min(x => x.Cost);
-        float maxCost = map.Grid.Terrain.ToEnumerable().Max(x => x.Cost);
+    private static void DrawMapGridBackground(Map map, Rectangle bounds) {
+        MapGridTerrain terrain = map.Grid.Terrain;
+        float minCost = terrain.ToEnumerable().Min(x => x.Cost);
+        float maxCost = terrain.ToEnumerable().Max(x => x.Cost);
 
-        for (int x = 0; x < map.Grid.Width; x++) {
-            for (int y = 0; y < map.Grid.Height; y++) {
+        for (int x = 0; x < terrain.Width; x++) {
+            for (int y = 0; y < terrain.Height; y++) {
                 MapGridCell cell = new(x, y);
+                MapGridCellData cellData = terrain[cell];
                 Vector2 pos = cell.World(map);
 
-                if (pos.X < bounds.X || 
-                    pos.X > bounds.X + bounds.Width ||
-                    pos.Y < bounds.Y ||
-                    pos.Y > bounds.Y + bounds.Height)
-                {
+                if (pos.X < bounds.X || pos.X > bounds.X + bounds.Width || pos.Y < bounds.Y || pos.Y > bounds.Y + bounds.Height) {
                     continue;
                 }
 
-                if (pos.IsWalkable(map)) {
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
+                if (cellData.IsWalkable) {
+                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGridTerrain.CellSize, MapGridTerrain.CellSize, new Color(64, 64, 64, 255));
+
+                    if (cellData.Cost > 1) {
+                        float costZeroToOne = (cellData.Cost - minCost) / (maxCost - minCost);
+                        Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGridTerrain.CellSize, MapGridTerrain.CellSize, new Color((int)(255 * costZeroToOne), 0, 0, 255));
+                    }
+                }
+            }
+        }
+    }
+
+    private static void DrawSmap(Map map, Rectangle bounds) {
+        foreach (KeyValuePair<GameDataSmapCell, GameDataSmapCellData> cell in map.Smap!.Data) {
+            Vector2 pos = new(cell.Key.X, cell.Key.Y);
+
+            if (pos.X < bounds.X || pos.X > bounds.X + bounds.Width || pos.Y < bounds.Y || pos.Y > bounds.Y + bounds.Height) {
+                continue;
+            }
+
+            if (cell.Value.Value > 0) {
+                Raylib.DrawRectangle((int)pos.X, (int)pos.Y, GameDataSmap.StepSize, GameDataSmap.StepSize, ColorFromValue(cell.Value));
+
+                if (!cell.Value.IsValid) {
+                    Raylib.DrawLine((int)pos.X, (int)pos.Y, (int)pos.X + GameDataSmap.StepSize, (int)pos.Y + GameDataSmap.StepSize, Color.Black);
+                    Raylib.DrawLine((int)pos.X + GameDataSmap.StepSize, (int)pos.Y, (int)pos.X, (int)pos.Y + GameDataSmap.StepSize, Color.Black);
+                }
+            }
+        }
+
+        static Color ColorFromValue(GameDataSmapCellData cellData) {
+            float t = ((float)cellData.Value - GameDataSmapCellData.MinValue) / (GameDataSmapCellData.MaxValue - GameDataSmapCellData.MinValue);
+            byte r = 255;
+            byte g = (byte)(255 * (1 - t));
+            byte b = 0;
+            byte a = 255;
+            return new(r, g, b, a);
+        }
+    }
+
+    private static void DrawSmapRpVsP(Map map, Rectangle bounds) {
+        MapGridTerrain terrain = map.Grid.Terrain;
+
+        for (int x = 0; x < terrain.Width; x++) {
+            for (int y = 0; y < terrain.Height; y++) {
+                MapGridCell cell = new(x, y);
+                Vector2 pos = cell.World(map);
+
+                if (pos.X < bounds.X || pos.X > bounds.X + bounds.Width || pos.Y < bounds.Y || pos.Y > bounds.Y + bounds.Height) {
+                    continue;
                 }
 
-                if (pos.Cost(map) > 1) {
-                    float costZeroToOne = (pos.Cost(map) - minCost) / (maxCost - minCost);
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(255, 0, 0, (int)(costZeroToOne * 255)));
+                GameDataSmapCellData cellDataRp = pos.RpHash(map);
+                GameDataSmapCellData cellDataP = pos.PHash(map);
+
+                if (cellDataRp.Value != cellDataP.Value) {
+                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGridTerrain.CellSize, MapGridTerrain.CellSize, Color.Pink);
                 }
             }
         }

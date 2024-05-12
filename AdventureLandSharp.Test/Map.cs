@@ -10,8 +10,8 @@ public class MapTests {
         Map main = InitWorld.World.GetMap("main");
 
         List<Vector2> world = [];
-        for (int y = 0; y < MapGrid.CellSize; ++y) {
-            for (int x = 0; x < MapGrid.CellSize; ++x) {
+        for (int y = 0; y < MapGridTerrain.CellSize; ++y) {
+            for (int x = 0; x < MapGridTerrain.CellSize; ++x) {
                 world.Add(new(main.Geometry.MinX + x, main.Geometry.MinY + y));
             }
         }

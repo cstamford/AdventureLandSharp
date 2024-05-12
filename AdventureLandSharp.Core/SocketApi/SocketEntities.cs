@@ -173,6 +173,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
     public void On(Inbound.DeathData evt) {
         Debug.Assert(evt.Id == Id);
         Vitals = Vitals with { Dead = true };
+        MovementPlan = null;
     }
 
     public void On(Inbound.NewMapData evt) {

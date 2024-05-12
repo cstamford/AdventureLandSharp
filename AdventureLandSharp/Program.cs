@@ -7,7 +7,7 @@ const string user = "dev";
 const string pass = "dev";
 
 GameData data = await Api.FetchGameDataAsync(Utils.ApiAddress);
-World world = new(data);
+World world = new(data, Utils.LoadSmapData());
 
 ApiCredentials creds = new(user, pass);
 ApiAuthState auth = await Api.LoginAsync(Utils.ApiAddress, creds);
