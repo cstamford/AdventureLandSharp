@@ -136,6 +136,9 @@ public static class Outbound {
         [property: JsonPropertyName("q")] long Quantity
     );
 
+    [OutboundSocketMessage("send_updates")]
+    public readonly record struct SendUpdates;
+
     [OutboundSocketMessage("stop")]
     public readonly record struct Stop(
         [property: JsonPropertyName("action")] string? Action
