@@ -54,11 +54,6 @@ public static class Inbound {
         [property: JsonPropertyName("id")] string Id
     );
 
-    [InboundSocketMessage("disappear")]
-    public readonly record struct DisappearData(
-        [property: JsonPropertyName("id")] string Id
-    );
-
     [InboundSocketMessage("drop")]
     public readonly record struct ChestDropData(
         [property: JsonPropertyName("chest")] string ChestType,
@@ -254,7 +249,7 @@ public readonly record struct EntityStats(
     [property: JsonPropertyName("range")] float AttackRange,
     [property: JsonPropertyName("resistance")] float Resistance,
     [property: JsonPropertyName("speed")] float Speed,
-    [property: JsonPropertyName("xp")] float Xp)
+    [property: JsonPropertyName("xp")] float? Xp)
 {
     public EntityStats(GameDataMonster monsterDef) : this(
         Armour: default,
@@ -273,7 +268,7 @@ public readonly record struct EntityStats(
         AttackRange = source.GetFloat("range", AttackRange),
         Resistance = source.GetFloat("resistance", Resistance),
         Speed = source.GetFloat("speed", Speed),
-        Xp = source.GetFloat("xp", Xp)
+        Xp = source.TryGetProperty("xp", out JsonElement xp) && xp.ValueKind == JsonValueKind.Number ? xp.GetSingle() : Xp
     };
 }
 
@@ -442,9 +437,11 @@ public readonly record struct PlayerInventory(
 
 public readonly record struct StatusEffect(
     [property: JsonPropertyName("f")] string Owner,
-    [property: JsonPropertyName("ms")] float MillisecondsRemaining
-) {
+    [property: JsonPropertyName("ms")] float MillisecondsRemaining,
+    [property: JsonPropertyName("s")] int? S)
+{
     public TimeSpan Duration => TimeSpan.FromMilliseconds(MillisecondsRemaining);
+    public int StackCount => S ?? 1;
 }
 
 public readonly record struct StatusEffects(Dictionary<string, StatusEffect> Effects) {
@@ -501,8 +498,9 @@ public readonly record struct StatusEffects(Dictionary<string, StatusEffect> Eff
     public StatusEffect? Reflection => Effects.TryGetValue("reflection", out StatusEffect eff) ? eff : null;
     public StatusEffect? RSpeed => Effects.TryGetValue("rspeed", out StatusEffect eff) ? eff : null;
     public StatusEffect? Sanguine => Effects.TryGetValue("sanguine", out StatusEffect eff) ? eff : null;
-    public StatusEffect? Shocked => Effects.TryGetValue("shocked", out StatusEffect eff) ? eff : null;
+    public StatusEffect? SelfHealing => Effects.TryGetValue("self_healing", out StatusEffect eff) ? eff : null;
     public StatusEffect? Sleeping => Effects.TryGetValue("sleeping", out StatusEffect eff) ? eff : null;
+    public StatusEffect? Shocked => Effects.TryGetValue("shocked", out StatusEffect eff) ? eff : null;
     public StatusEffect? Slowness => Effects.TryGetValue("slowness", out StatusEffect eff) ? eff : null;
     public StatusEffect? Stack => Effects.TryGetValue("stack", out StatusEffect eff) ? eff : null;
     public StatusEffect? Stoned => Effects.TryGetValue("stoned", out StatusEffect eff) ? eff : null;
