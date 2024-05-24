@@ -22,7 +22,7 @@ class MapGraphEdgeComparer : IEqualityComparer<IMapGraphEdge> {
 
 public readonly record struct MapGraphEdgeInterMap(MapLocation Source, MapLocation Dest, long DestSpawnId, MapConnectionType Type) : IMapGraphEdge {
     public override readonly string ToString() => $"{Type} from {Source} to {Dest}.";
-    public float Cost => 50;
+    public float Cost => 100;
 }
 
 public readonly record struct MapGraphEdgeIntraMap(Vector2 SourcePos, Vector2 DestPos, Map Map, List<Vector2> Path, float Cost) : IMapGraphEdge {
