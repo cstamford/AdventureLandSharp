@@ -71,7 +71,7 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
 
     private readonly PathMovementPlan _pathMovementPlan = new(start, path);
     private Vector2 _clickAheadPoint = start;
-    private static readonly TimeSpan _clickAheadLatency = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan _clickAheadLatency = TimeSpan.FromMilliseconds(500);
 
     private Vector2 CalculateClickAheadPoint(Vector2 target, float speed) {
         Vector2 direction = Vector2.Normalize(target - Position);
@@ -89,7 +89,7 @@ public class ClickAheadMovementPlan(Vector2 start, Queue<Vector2> path, Map map)
             },
             maxResults: null
         );
-    
+
         return furthestValid.World(map);
     }
 }
