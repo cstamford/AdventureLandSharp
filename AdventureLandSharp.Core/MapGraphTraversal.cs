@@ -64,6 +64,10 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     private void ProcessEdge() {
         _log.Debug($"{_edge}");
 
+        if (_edge is not MapGraphEdgeIntraMap) {
+            Player.MovementPlan = null;
+        }
+
         if (_edge is MapGraphEdgeInterMap interMap) {
             if (interMap.Type is MapConnectionType.Door or MapConnectionType.Transporter) {
                 socket.Emit<Outbound.Transport>(new(interMap.Dest.Map.Name, interMap.DestSpawnId));
@@ -81,7 +85,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
                 Player.MovementPlan = new ClickAheadMovementPlan(Player.Position, new(intraMap.Path), intraMap.Source.Map);
                 _edge = intraMap;
             }
-        } else if (_edge is MapGraphEdgeTeleport tp) {
+        } else if (_edge is MapGraphEdgeTeleport) {
             socket.Emit<Outbound.Town>(new());
         } else {
             throw new NotImplementedException($"Unknown edge type: {_edge}");
@@ -127,7 +131,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 
             for (int startIdx = originalStartIdx + 1; startIdx < edge.Path.Count; ++startIdx) {
                 MapGridCell pos = edge.Path[startIdx].Grid(edge.Map);
-                MapGridLineOfSight los = MapGrid.LineOfSight(start, pos, c => c.Data(edge.Map).PHashScore > 3);
+                MapGridLineOfSight los = MapGrid.LineOfSight(start, pos, c => c.Data(edge.Map).PHashScore > 2);
 
                 if (los.Occluded.Count == 0) {
                     lastIndexWithLOS = startIdx;

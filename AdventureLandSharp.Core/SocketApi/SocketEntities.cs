@@ -86,6 +86,10 @@ public abstract class Entity {
             MovementPlan = new DestinationMovementPlan(Position, GoingPosition.Value);
         }
 
+        if (!GoingPosition.HasValue) {
+            MovementPlan = null;
+        }
+
         if (MovementPlan != null) {
             MovementPlan.Update(dt, Speed);
             Position = MovementPlan.Position;
@@ -135,6 +139,18 @@ public class Player(JsonElement source) : Entity(source) {
         base.Update(source);
         OwnerId = source.GetString("owner");
     }
+
+    public override void Tick(float dt) {
+        if (Dead) {
+            MovementPlan = null;
+            return;
+        }
+
+        if (MovementPlan != null) {
+            MovementPlan.Update(dt, Speed);
+            Position = MovementPlan.Position;
+        }
+    }
 }
 
 public sealed class LocalPlayer(JsonElement source) : Player(source) {
@@ -167,20 +183,17 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
 
     public void On(Inbound.CorrectionData evt) {
         Position = new(evt.X, evt.Y);
-        MovementPlan = null;
     }
 
     public void On(Inbound.DeathData evt) {
         Debug.Assert(evt.Id == Id);
         Vitals = Vitals with { Dead = true };
-        MovementPlan = null;
     }
 
     public void On(Inbound.NewMapData evt) {
         MapName = evt.MapName;
         MapId = evt.MapId;
         Position = new(evt.PlayerX, evt.PlayerY);
-        MovementPlan = null;
     }
 
     private static PlayerBank? ReadPlayerBank(JsonElement source) {
