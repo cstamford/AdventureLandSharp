@@ -40,6 +40,9 @@ public static class Outbound {
         { }
     }
 
+    [OutboundSocketMessage("blend")]
+    public readonly record struct Blend;
+
     [OutboundSocketMessage("buy")]
     public readonly record struct Buy(
         [property: JsonPropertyName("name")] string Name,
@@ -172,6 +175,13 @@ public static class Outbound {
     public readonly record struct UseSkillOnIds(
         [property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("ids")] string[] Ids
+    );
+
+    [OutboundSocketMessage("skill")]
+    public readonly record struct UseSkillOnPosition(
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("x")] double X,
+        [property: JsonPropertyName("y")] double Y
     );
 
     [OutboundSocketMessage("skill")]
