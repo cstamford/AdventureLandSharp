@@ -12,7 +12,7 @@ public class Socket : IDisposable {
     public bool Connected => _connection.Connected && _player.Id != null;
 
     public event Action<Inbound.CorrectionData>? OnCorrection;
-    public event Action<Inbound.DisappearData>? OnDisappear;
+    public event Action<JsonElement>? OnDisappear;
     public event Action<JsonElement>? OnGameResponse;
     public event Action<Inbound.HitData>? OnHit;
     public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
@@ -98,6 +98,7 @@ public class Socket : IDisposable {
             _log.Info($"Connected to server.");
             _player = new LocalPlayer(e);
 
+            RegisterRecv_Queue("disappear", Recv_Disappear);
             RegisterRecv_Queue("game_response", Recv_GameResponse);
             RegisterRecv_Queue("player", Recv_Player);
         };
@@ -171,11 +172,6 @@ public class Socket : IDisposable {
             _player.On(evt);
         }
 
-        _entities.Remove(evt.Id);
-    }
-
-    private void Recv(Inbound.DisappearData evt) {
-        OnDisappear?.Invoke(evt);
         _entities.Remove(evt.Id);
     }
 
@@ -255,6 +251,12 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.SkillTimeoutData evt) {
         OnSkillTimeout?.Invoke(evt);
+    }
+
+    private void Recv_Disappear(SocketIOResponse data) {
+        JsonElement disappear = data.GetValue<JsonElement>();
+        OnDisappear?.Invoke(disappear);
+        _entities.Remove(disappear.GetString("id"));
     }
 
     private void Recv_GameResponse(SocketIOResponse data) {
