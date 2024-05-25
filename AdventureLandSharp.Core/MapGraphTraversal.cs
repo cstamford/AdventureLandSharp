@@ -58,7 +58,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 
     private DateTimeOffset NextEdgeUpdate(DateTimeOffset now) => _edge switch {
         MapGraphEdgeTeleport => now.Add(TimeSpan.FromSeconds(4.5)),
-        _ => now.Add(TimeSpan.FromSeconds(0.1))
+        _ => now.Add(TimeSpan.FromSeconds(0.25))
     };
 
     private void ProcessEdge() {
@@ -141,7 +141,12 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
             }
 
             if (lastIndexWithLOS > originalStartIdx) {
-                edge.Path.RemoveRange(originalStartIdx + 1, lastIndexWithLOS - originalStartIdx - 1);
+                int cutIdxOneAfter = originalStartIdx + 1;
+                int cutLength = lastIndexWithLOS - cutIdxOneAfter;
+
+                if (cutLength > 0) {
+                    edge.Path.RemoveRange(cutIdxOneAfter, cutLength);
+                }
             }
 
             ++originalStartIdx;
