@@ -12,7 +12,7 @@ public readonly record struct MapGridLineOfSight(
 
 public readonly record struct MapGridPath(float Cost, List<MapGridCell> Points);
 
-public readonly record struct MapGridPathSettings(MapGridHeuristic Heuristic,int? MaxSteps, float? MaxCost) {
+public readonly record struct MapGridPathSettings(MapGridHeuristic Heuristic, int? MaxSteps, float? MaxCost) {
     public MapGridPathSettings() : this(MapGridHeuristic.Euclidean, null, null) { }
 }
 
@@ -85,11 +85,7 @@ public class MapGrid(GameDataMap map, GameLevelGeometry geo, GameDataSmap? smap)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public MapGridCell? FindNearestWalkable(MapGridCell start, MapGridPathSettings settings) {
-        if (_terrain[start].IsWalkable) {
-            return start;
-        }
-
+    public static MapGridCell? FindNearest(MapGridCell start, Func<MapGridCell, bool> getIsValid, MapGridPathSettings settings) {
         QuadMap<MapGridCell, (float, MapGridCell)> dict = _dictPool.Value!;
         FastPriorityQueue<MapGridCell> Q = _queuePool.Value!;
 
@@ -100,7 +96,7 @@ public class MapGrid(GameDataMap map, GameLevelGeometry geo, GameDataSmap? smap)
         Q.Enqueue(start, 0);
 
         for (int steps = 0; Q.TryDequeue(out MapGridCell pos, out float cost); ++steps) {
-            if (_terrain[pos].IsWalkable) {
+            if (getIsValid(pos)) {
                 return pos;
             }
 

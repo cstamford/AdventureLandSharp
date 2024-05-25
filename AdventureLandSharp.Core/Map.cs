@@ -77,7 +77,7 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
             return walkable;
         }
 
-        MapGridCell? nearest = Grid.FindNearestWalkable(cell, settings);
+        MapGridCell? nearest = MapGrid.FindNearest(cell, pos => pos.Data(this).IsWalkable, settings);
         _walkableCache.TryAdd(cell, nearest);
         return nearest;
     }
