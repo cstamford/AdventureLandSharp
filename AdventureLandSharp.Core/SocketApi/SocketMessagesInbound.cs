@@ -216,11 +216,11 @@ public static class Inbound {
     [InboundSocketMessage("tracker")]
     public readonly record struct Tracker(
         [property: JsonPropertyName("monsters")] JsonElement Monsters,
-        [property: JsonPropertyName("mosnters_diff")] JsonElement MonstersDiff,
+        [property: JsonPropertyName("monsters_diff")] JsonElement MonstersDiff,
         [property: JsonPropertyName("exchanges")] JsonElement Exchanges,
         [property: JsonPropertyName("maps")] JsonElement Maps,
         [property: JsonPropertyName("tables")] JsonElement Tables,
-        [property: JsonPropertyName("max")] JsonElement Max
+        [property: JsonPropertyName("max")] TrackerMax Max
     );
 
     [InboundSocketMessage("upgrade")]
@@ -524,4 +524,11 @@ public readonly record struct StatusEffects(Dictionary<string, StatusEffect> Eff
     public StatusEffect? Weakness => Effects.TryGetValue("weakness", out StatusEffect eff) ? eff : null;
     public StatusEffect? XPower => Effects.TryGetValue("xpower", out StatusEffect eff) ? eff : null;
     public StatusEffect? XShotted => Effects.TryGetValue("xshotted", out StatusEffect eff) ? eff : null;
+}
+
+public record struct TrackerMax(
+    [property: JsonPropertyName("monsters")] Dictionary<string, JsonElement> Monsters)
+{
+    [JsonIgnore] public readonly Dictionary<string, (int MonsterKillCount, string CharacterName)> MonsterData => Monsters
+        .ToDictionary(x => x.Key, x => ((int)x.Value[0].GetDouble(), x.Value[1].GetString()!));
 }
