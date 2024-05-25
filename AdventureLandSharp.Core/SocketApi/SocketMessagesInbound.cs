@@ -213,7 +213,7 @@ public static class Inbound {
         [property: JsonPropertyName("ms")] int MillisecondsUntilReady /* excluding latency */
     );
 
-    [OutboundSocketMessage("tracker")]
+    [InboundSocketMessage("tracker")]
     public readonly record struct Tracker(
         [property: JsonPropertyName("monsters")] JsonElement Monsters,
         [property: JsonPropertyName("mosnters_diff")] JsonElement MonstersDiff,
