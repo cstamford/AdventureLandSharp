@@ -11,6 +11,10 @@
     <ProjectReference Include="..\AdventureLandSharp.Core\AdventureLandSharp.Core.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS0162;CS9113</NoWarn> <!-- Disable unread parameter and unreachable code warnings. -->
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>$(DefineConstants);WITH_GUI</DefineConstants>
   </PropertyGroup>
