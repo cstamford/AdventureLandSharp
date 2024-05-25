@@ -101,20 +101,12 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
 
         float cuttableDistance = UsableDistance(nextEdgeInter.Type) - MapGridTerrain.Epsilon*2;
         if (cuttableDistance > 0) {
-            int cutIdx = edge.Path.FindIndex(x => x.SimpleDist(nextEdgeInter.Source.Position) < cuttableDistance);
-
-            if (cutIdx != -1) {
-                int cutIdxOneAfter = cutIdx + 1;
-                int cutLength = edge.Path.Count - cutIdxOneAfter;
-
-                if (cutLength > 0) {
-                    edge.Path.RemoveRange(cutIdxOneAfter, cutLength);
-                }
+            int cutIdx = edge.Path.FindIndex(x => x.SimpleDist(nextEdgeInter.Source.Position) <= cuttableDistance);
+            if (cutIdx != -1 && cutIdx < edge.Path.Count - 1) {
+                Vector2 newLocation = edge.Path[cutIdx];
+                Debug.Assert(newLocation.SimpleDist(nextEdgeInter.Source.Position) < cuttableDistance);
+                return edge with { DestPos = newLocation, Path = edge.Path[..(cutIdx + 1)]};
             }
-
-            Vector2 newLocation = edge.Path.Count > 0 ? edge.Path[^1] : Player.Position;
-            Debug.Assert(newLocation.SimpleDist(nextEdgeInter.Source.Position) < cuttableDistance);
-            return edge with { DestPos = newLocation };
         }
 
         return edge;
@@ -123,36 +115,25 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
     // Given an intra-map edge, merges all of the steps that are within line of sight of each other,
     // so on and so forth until the edge is a series of connecting line of sight steps.
     private static MapGraphEdgeIntraMap ProcessEdge_LineOfSightMerge(MapGraphEdgeIntraMap edge) {
-        int originalStartIdx = 0;
+        List<Vector2> path = [edge.Path[0]];
 
-        while (originalStartIdx < edge.Path.Count) {
-            MapGridCell start = edge.Path[originalStartIdx].Grid(edge.Map);
-            int lastIndexWithLOS = -1;
+        for (int i = 1; i < edge.Path.Count; ++i) {
+            MapGridCell start = path[^1].Grid(edge.Map);
+            MapGridCell end = edge.Path[i].Grid(edge.Map);
+            MapGridLineOfSight los = MapGrid.LineOfSight(start, end, c => c.Data(edge.Map).PHashScore > 2);
 
-            for (int startIdx = originalStartIdx + 1; startIdx < edge.Path.Count; ++startIdx) {
-                MapGridCell pos = edge.Path[startIdx].Grid(edge.Map);
-                MapGridLineOfSight los = MapGrid.LineOfSight(start, pos, c => c.Data(edge.Map).PHashScore > 2);
-
-                if (los.Occluded.Count == 0) {
-                    lastIndexWithLOS = startIdx;
-                } else {
-                    break;
-                }
+            if (los.Occluded.Count == 0) {
+                continue;
             }
 
-            if (lastIndexWithLOS > originalStartIdx) {
-                int cutIdxOneAfter = originalStartIdx + 1;
-                int cutLength = lastIndexWithLOS - cutIdxOneAfter;
-
-                if (cutLength > 0) {
-                    edge.Path.RemoveRange(cutIdxOneAfter, cutLength);
-                }
-            }
-
-            ++originalStartIdx;
+            path.Add(edge.Path[i]);
         }
 
-        return edge;
+        if (path[^1] != edge.Path[^1]) {
+            path.Add(edge.Path[^1]);
+        }
+
+        return edge with { Path = path };
     }
 
     private static float UsableDistance(MapConnectionType Type) => Type switch {
