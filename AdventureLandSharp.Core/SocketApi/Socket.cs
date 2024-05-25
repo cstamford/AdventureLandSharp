@@ -14,11 +14,13 @@ public class Socket : IDisposable {
     public event Action<Inbound.CorrectionData>? OnCorrection;
     public event Action<Inbound.DeathData>? OnDeath;
     public event Action<JsonElement>? OnDisappear;
+    public event Action<Inbound.EntitiesData>? OnEntities;
     public event Action<JsonElement>? OnGameResponse;
     public event Action<Inbound.HitData>? OnHit;
     public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
     public event Action<Inbound.NewMapData>? OnNewMap;
     public event Action<Inbound.PartyRequestData>? OnPartyRequest;
+    public event Action<JsonElement>? OnPlayer;
     public event Action<Inbound.ServerInfo>? OnServerInfo;
     public event Action<Inbound.SkillTimeoutData>? OnSkillTimeout;
     public event Action<Inbound.Tracker>? OnTracker;
@@ -194,6 +196,8 @@ public class Socket : IDisposable {
             return;
         }
 
+        OnEntities?.Invoke(evt);
+
         if (evt.Type == "all") {
             _entities.Clear();
         }
@@ -272,7 +276,9 @@ public class Socket : IDisposable {
     }
 
     private void Recv_Player(SocketIOResponse data) {
-        _player.Update(data.GetValue<JsonElement>());
+        JsonElement player = data.GetValue<JsonElement>();
+        OnPlayer?.Invoke(player);
+        _player.Update(player);
     }
 
     private void Recv_NoQueue_DisconnectReason(SocketIOResponse data) {
