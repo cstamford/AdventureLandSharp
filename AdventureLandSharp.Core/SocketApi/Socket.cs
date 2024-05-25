@@ -12,6 +12,7 @@ public class Socket : IDisposable {
     public bool Connected => _connection.Connected && _player.Id != null;
 
     public event Action<Inbound.CorrectionData>? OnCorrection;
+    public event Action<Inbound.DeathData>? OnDeath;
     public event Action<JsonElement>? OnDisappear;
     public event Action<JsonElement>? OnGameResponse;
     public event Action<Inbound.HitData>? OnHit;
@@ -168,6 +169,8 @@ public class Socket : IDisposable {
     }
 
     private void Recv(Inbound.DeathData evt) {
+        OnDeath?.Invoke(evt);
+
         if (evt.Id == _player.Id) {
             _player.On(evt);
         }
