@@ -147,6 +147,9 @@ public static class Outbound {
     [OutboundSocketMessage("town")]
     public readonly record struct Town;
 
+    [OutboundSocketMessage("tracker")]
+    public readonly record struct Tracker;
+
     [OutboundSocketMessage("transport")]
     public readonly record struct Transport(
         [property: JsonPropertyName("to")] string Map,

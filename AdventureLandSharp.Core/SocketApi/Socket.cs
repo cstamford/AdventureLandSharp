@@ -21,6 +21,7 @@ public class Socket : IDisposable {
     public event Action<Inbound.PartyRequestData>? OnPartyRequest;
     public event Action<Inbound.ServerInfo>? OnServerInfo;
     public event Action<Inbound.SkillTimeoutData>? OnSkillTimeout;
+    public event Action<Inbound.Tracker>? OnTracker;
 
     public MovingWindow<string> IncomingMessages_10Secs => _incomingWindow;
     public MovingWindow<string> OutgoingMessages_10Secs => _outgoingWindow;
@@ -254,6 +255,10 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.SkillTimeoutData evt) {
         OnSkillTimeout?.Invoke(evt);
+    }
+
+    private void Recv(Inbound.Tracker evt) {
+        OnTracker?.Invoke(evt);
     }
 
     private void Recv_Disappear(SocketIOResponse data) {

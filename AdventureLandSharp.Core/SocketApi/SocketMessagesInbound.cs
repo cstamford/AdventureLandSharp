@@ -213,6 +213,16 @@ public static class Inbound {
         [property: JsonPropertyName("ms")] int MillisecondsUntilReady /* excluding latency */
     );
 
+    [OutboundSocketMessage("tracker")]
+    public readonly record struct Tracker(
+        [property: JsonPropertyName("monsters")] JsonElement Monsters,
+        [property: JsonPropertyName("mosnters_diff")] JsonElement MonstersDiff,
+        [property: JsonPropertyName("exchanges")] JsonElement Exchanges,
+        [property: JsonPropertyName("maps")] JsonElement Maps,
+        [property: JsonPropertyName("tables")] JsonElement Tables,
+        [property: JsonPropertyName("max")] JsonElement Max
+    );
+
     [InboundSocketMessage("upgrade")]
     public readonly record struct UpgradeData(
         [property: JsonPropertyName("type")] string Type,
