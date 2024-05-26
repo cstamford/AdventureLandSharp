@@ -134,10 +134,15 @@ public sealed class Npc : Entity {
 public class Player(JsonElement source) : Entity(source) {
     public string OwnerId { get; private set; } = source.GetString("owner");
     public override Vector2 Size => new(GameConstants.PlayerWidth, GameConstants.PlayerHeight);
+    public PlayerActions Actions { get; private set; } = source.TryGetProperty("c", out JsonElement c) ? c.Deserialize<PlayerActions>() : new();
 
     public override void Update(JsonElement source) {
         base.Update(source);
         OwnerId = source.GetString("owner");
+
+        if (source.TryGetProperty("c", out JsonElement c)) {
+            Actions = c.Deserialize<PlayerActions>();
+        }
     }
 
     public override void Tick(float dt) {

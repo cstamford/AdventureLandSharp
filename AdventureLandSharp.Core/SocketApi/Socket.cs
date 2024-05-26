@@ -41,7 +41,7 @@ public class Socket : IDisposable {
     public Inbound.ServerInfo ServerInfo => _serverInfo;
 
     public Socket(World world, ConnectionSettings settings) {
-        _log = new(settings.Character.Name, "SOCKET");
+        _log = new(settings.Character.Name, "Socket");
         _world = world;
         _connection = new(settings);
 

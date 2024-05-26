@@ -44,7 +44,7 @@ public class BasicSession(World world, ConnectionSettings settings, CharacterFac
 
     protected readonly World _world = world;
     protected readonly ConnectionSettings _settings = settings;
-    protected readonly Logger _log = new(settings.Character.Name, "SESSION");
+    protected readonly Logger _log = new(settings.Character.Name, "Session");
     protected Socket? _socket;
     protected ISessionGui? _gui;
     protected bool _disposed = false;

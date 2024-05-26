@@ -12,9 +12,16 @@ public class Map(string mapName, GameData gameData, GameDataMap mapData, GameLev
     public GameDataMap Data => mapData;
     public GameDataSmap? Smap => smapData;
     public GameLevelGeometry Geometry => mapGeometry;
+
     public MapLocation DefaultSpawn => new(this, new((float)mapData.SpawnPositions[0][0], (float)mapData.SpawnPositions[0][1]));
-    public MapLocation? FishingSpot => mapName == "main" ? new(this, new(-1368, -257)) : null;
     public float DefaultSpawnScatter => mapData.SpawnPositions[0].Length >= 4 ? (float)mapData.SpawnPositions[0][3] : 0;
+
+    public MapLocation? FishingSpot => mapName == "main" ? new(this, new(-1368, -257)) : null;
+    public MapLocation? MiningSpot => mapName switch {
+        "tunnel" => new(this, new(-290, -10)),
+        "woffice" => new(this, new(-154, -174)),
+        _ => null
+    };
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGraphEdgeIntraMap? FindPath(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) {

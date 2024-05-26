@@ -85,7 +85,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
         });
     }
 
-    private readonly Logger _log = new(settings.Character.Name, "CONNECTION");
+    private readonly Logger _log = new(settings.Character.Name, "Connection");
 
     private SocketIOClient.SocketIO? _socketIo;
     private DateTimeOffset _authTimeout = DateTimeOffset.UtcNow;

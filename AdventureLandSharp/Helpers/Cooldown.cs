@@ -7,9 +7,14 @@ public class Cooldown(TimeSpan cd, float cdMulti = 1) {
         get => cd * cdMulti;
         set => cd = value;
     }
-    public bool Ready => DateTimeOffset.UtcNow >= _end;
-    public void Restart() => _end = DateTimeOffset.UtcNow.Add(Duration);
-    private DateTimeOffset _end = DateTimeOffset.UtcNow;
+    public DateTimeOffset Start => _start;
+    public DateTimeOffset End => _start.Add(Duration);
+    public TimeSpan Remaining => End.Subtract(DateTimeOffset.UtcNow);
+    public bool Ready => DateTimeOffset.UtcNow >= End;
+
+    public void Restart() => _start = DateTimeOffset.UtcNow;
+
+    private DateTimeOffset _start = DateTimeOffset.UtcNow;
 }
 
 public static class CooldownBtExtensions {

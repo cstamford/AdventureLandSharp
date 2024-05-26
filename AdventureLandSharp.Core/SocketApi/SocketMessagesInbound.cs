@@ -318,6 +318,19 @@ public readonly record struct Item(
     [property: JsonPropertyName("p")] string? SpecialType
 );
 
+public readonly record struct PlayerActions(
+    [property: JsonPropertyName("fishing")] PlayerAction? Fishing,
+    [property: JsonPropertyName("mining")] PlayerAction? Mining,
+    [property: JsonPropertyName("pickpocket")] PlayerAction? PickPocket
+);
+
+public readonly record struct PlayerAction(
+    [property: JsonPropertyName("ms")] float MillisecondsRemaining,
+    [property: JsonPropertyName("drop")] string Drop
+) {
+    public TimeSpan Duration => TimeSpan.FromMilliseconds(MillisecondsRemaining);
+}
+
 public readonly record struct PlayerEquipment(
     [property: JsonPropertyName("ring1")] Item? Ring1,
     [property: JsonPropertyName("ring2")] Item? Ring2,

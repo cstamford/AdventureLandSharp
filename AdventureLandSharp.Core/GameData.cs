@@ -117,6 +117,17 @@ public readonly record struct GameDataMapNpc(
     public Vector2? GetPosition() => Position != null ? new((float)Position[0], (float)Position[1]) : null;
 }
 
+public readonly record struct GameDataSkillDef(
+    [property: JsonPropertyName("mp")] double? Mp,
+    [property: JsonPropertyName("range")] double? Range,
+    [property: JsonPropertyName("cooldown")] double? CooldownMs,
+    [property: JsonPropertyName("duration")] double? DurationMs,
+    [property: JsonPropertyName("share")] string? CdShareName
+) {
+    public TimeSpan? Cooldown => CooldownMs.HasValue ? TimeSpan.FromMilliseconds(CooldownMs.Value) : null;
+    public TimeSpan? Duration => DurationMs.HasValue ? TimeSpan.FromMilliseconds(DurationMs.Value) : null;
+}
+
 public readonly record struct GameData(
     [property: JsonPropertyName("positions")] Dictionary<string, object> Positions,
     [property: JsonPropertyName("titles")] Dictionary<string, object> Titles,
@@ -143,7 +154,7 @@ public readonly record struct GameData(
     [property: JsonPropertyName("items")] Dictionary<string, GameItem> Items,
     [property: JsonPropertyName("levels")] Dictionary<int, long> Levels,
     [property: JsonPropertyName("events")] Dictionary<string, object> Events,
-    [property: JsonPropertyName("skills")] Dictionary<string, object> Skills,
+    [property: JsonPropertyName("skills")] Dictionary<string, GameDataSkillDef> Skills,
     [property: JsonPropertyName("classes")] Dictionary<string, object> Classes,
     [property: JsonPropertyName("games")] Dictionary<string, object> Games,
     [property: JsonPropertyName("sets")] Dictionary<string, object> Sets,
