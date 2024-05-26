@@ -122,6 +122,11 @@ public static class Inbound {
         [property: JsonConverter(typeof(JsonConverterArrayOrFalse<string>)), JsonPropertyName("list")] string[] Members
     );
 
+    [InboundSocketMessage("ping_ack")]
+    public readonly record struct PingAckData(
+        [property: JsonPropertyName("id")] long Id
+    );
+
     [InboundSocketMessage("server_info")]
     public readonly record struct ServerInfo(
         [property: JsonPropertyName("schedule")] ServerInfo_Schedule Schedule,

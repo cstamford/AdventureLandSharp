@@ -10,6 +10,7 @@ namespace AdventureLandSharp.Core.SocketApi;
 
 public class Socket : IDisposable {
     public bool Connected => _connection.Connected && _player.Id != null;
+    public TimeSpan Latency => _latency;
 
     public event Action<Inbound.CorrectionData>? OnCorrection;
     public event Action<Inbound.DeathData>? OnDeath;
@@ -94,6 +95,7 @@ public class Socket : IDisposable {
 
             RegisterRecv_NoQueue("disconnect_reason", Recv_NoQueue_DisconnectReason);
             RegisterRecv_NoQueue("limitdcreport", Recv_NoQueue_LimitDCReport);
+            RegisterRecv_NoQueue("ping_ack", Recv_NoQueue_PingAck);
             RegisterRecv_NoQueue("start", Recv_NoQueue_Start);
             RegisterRecv_NoQueue("welcome", Recv_NoQueue_Welcome);
         };
@@ -138,6 +140,7 @@ public class Socket : IDisposable {
         }
 
         Update_DrainRecvQueue();
+        Update_PingPong();
         Update_CullEntities();
         Update_Tick();
         Update_NetMovement();
@@ -165,6 +168,10 @@ public class Socket : IDisposable {
 
     private const float _minMoveHz = 1.0f / 5.0f;
     private const float _maxMoveHz = 1.0f / 60.0f;
+
+    private long _pingId;
+    private DateTimeOffset _pingSentAt = DateTimeOffset.UtcNow;
+    private TimeSpan _latency = TimeSpan.FromMilliseconds(200);
 
     private void Recv(Inbound.CorrectionData evt) {
         OnCorrection?.Invoke(evt);
@@ -289,6 +296,13 @@ public class Socket : IDisposable {
         _log.Warn($"disconnect_reason: {data}");
     }
 
+    private void Recv_NoQueue_PingAck(SocketIOResponse data) {
+        Inbound.PingAckData evt = data.GetValue<Inbound.PingAckData>();
+        if (evt.Id == _pingId) {
+            _latency = DateTimeOffset.UtcNow.Subtract(_pingSentAt);
+        }
+    }
+
     private void Recv_NoQueue_Start(SocketIOResponse data) {
         JsonElement root = data.GetValue<JsonElement>();
         _serverInfo = root.GetProperty("s_info").Deserialize<Inbound.ServerInfo>();
@@ -315,6 +329,14 @@ public class Socket : IDisposable {
             } catch (Exception ex) {
                 _log.Error($"Error processing incoming message {data.Event}: {ex}");
             }
+        }
+    }
+
+    private void Update_PingPong() {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (now.Subtract(_pingSentAt) >= TimeSpan.FromSeconds(1)) {
+            _pingSentAt = now;
+            Emit<Outbound.Ping>(new(++_pingId));
         }
     }
 

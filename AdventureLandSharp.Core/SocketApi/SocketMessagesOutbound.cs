@@ -114,6 +114,11 @@ public static class Outbound {
         [property: JsonPropertyName("event")] public string Event { get; } = "request";
     }
 
+    [OutboundSocketMessage("ping_trig")]
+    public readonly record struct Ping(
+        [property: JsonPropertyName("id")] long Id
+    );
+
     [OutboundSocketMessage("respawn")]
     public readonly record struct Respawn;
 
