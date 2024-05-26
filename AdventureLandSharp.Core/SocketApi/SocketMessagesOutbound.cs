@@ -144,6 +144,11 @@ public static class Outbound {
         [property: JsonPropertyName("action")] string? Action
     );
 
+    [OutboundSocketMessage("throw")]
+    public readonly record struct Throw(
+        [property: JsonPropertyName("num")] int InventorySlot
+    );
+
     [OutboundSocketMessage("town")]
     public readonly record struct Town;
 
