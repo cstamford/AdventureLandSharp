@@ -47,7 +47,7 @@ public readonly record struct MapGridCellData(
     int RpHashScore,
     int PHashScore)
 {
-    public readonly bool IsWalkable => Cost >= 1 && RpHashScore < GameDataSmapCellData.JailValue;
+    public readonly bool IsWalkable => Cost >= 1 && RpHashScore < GameDataSmapCellData.JailValue && PHashScore == 0;
 
     public static MapGridCellData Walkable => new(
         Cost: 1,

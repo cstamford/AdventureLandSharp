@@ -120,7 +120,7 @@ public class MapGraphTraversal(Socket socket, IEnumerable<IMapGraphEdge> edges, 
         for (int i = 1; i < edge.Path.Count; ++i) {
             MapGridCell start = path[^1].Grid(edge.Map);
             MapGridCell end = edge.Path[i].Grid(edge.Map);
-            MapGridLineOfSight los = MapGrid.LineOfSight(start, end, c => c.Data(edge.Map).PHashScore > 2);
+            MapGridLineOfSight los = MapGrid.LineOfSight(start, end, c => c.Data(edge.Map).PHashScore > 0);
 
             if (los.Occluded.Count == 0) {
                 continue;
