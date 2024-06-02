@@ -12,6 +12,7 @@ public class Socket : IDisposable {
     public bool Connected => _connection.Connected && _player.Id != null;
     public TimeSpan Latency => _latency;
 
+    public event Action<Inbound.ActionData>? OnAction;
     public event Action<Inbound.CorrectionData>? OnCorrection;
     public event Action<Inbound.DeathData>? OnDeath;
     public event Action<JsonElement>? OnDisappear;
@@ -174,6 +175,14 @@ public class Socket : IDisposable {
     private TimeSpan _latency = TimeSpan.FromMilliseconds(200);
     private DateTimeOffset _resyncedAt = DateTimeOffset.UtcNow;
 
+    private void Recv(Inbound.ActionData evt) {
+        OnAction?.Invoke(evt);
+
+        if (_entities.TryGetValue(evt.TargetId, out Entity? e)) { 
+            e.On(evt);
+        }
+    }
+
     private void Recv(Inbound.CorrectionData evt) {
         OnCorrection?.Invoke(evt);
         _player.On(evt);
@@ -240,6 +249,9 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.HitData evt) {
         OnHit?.Invoke(evt);
+        if (_entities.TryGetValue(evt.TargetId, out Entity? e)) { 
+            e.On(evt);
+        }
     }
 
     private void Recv(Inbound.MagiportRequestData evt) {

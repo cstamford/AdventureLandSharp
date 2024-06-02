@@ -8,7 +8,7 @@ namespace AdventureLandSharp.Core.SocketApi;
 public abstract class Entity {
     public override string ToString() => $"{GetType().Name} [{Name}/{Id}] {Position}";
 
-    public bool Dead => Vitals.Dead;
+    public bool Dead => Vitals.Dead || DateTimeOffset.UtcNow < (_likelyDeadUntil ?? DateTimeOffset.MinValue);
 
     public float Health => Vitals.Hp;
     public float MaxHealth => Vitals.MaxHp;
@@ -96,7 +96,22 @@ public abstract class Entity {
         }
     }
 
+    public void On(Inbound.ActionData evt) {
+        Debug.Assert(evt.TargetId == Id);
+        if (Health <= evt.Damage) {
+            _likelyDeadUntil = DateTimeOffset.UtcNow.AddMilliseconds(evt.Eta).AddSeconds(1);
+        }
+    }
+
+    public void On(Inbound.HitData evt) {
+        Debug.Assert(evt.TargetId == Id);
+        if (evt.Kill) {
+            _likelyDeadUntil = DateTimeOffset.UtcNow.AddSeconds(1);
+        }
+    }
+
     private readonly string _name;
+    private DateTimeOffset? _likelyDeadUntil;
 
     private static Vector2? ParseGoingPosition(JsonElement source) =>
         source.GetBool("moving", false) &&
@@ -193,6 +208,7 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         Debug.Assert(evt.Id == Id);
         Vitals = Vitals with { Dead = true };
     }
+
 
     public void On(Inbound.NewMapData evt) {
         MapName = evt.MapName;

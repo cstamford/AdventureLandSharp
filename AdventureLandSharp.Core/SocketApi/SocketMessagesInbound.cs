@@ -15,18 +15,19 @@ public class InboundSocketMessageAttribute(string name, bool debug = false) : At
 public static class Inbound {
     [InboundSocketMessage("action")]
     public readonly record struct ActionData(
-        [property: JsonPropertyName("anim")] string AnimationType,
         [property: JsonPropertyName("attacker")] string Attacker,
+        [property: JsonPropertyName("target")] string TargetId,
+        [property: JsonPropertyName("m")] int MapId,
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("source")] string Source,
         [property: JsonPropertyName("damage")] double? Damage,
         [property: JsonPropertyName("heal")] double? Heal,
-        [property: JsonPropertyName("m")] int MapIndex,
-        [property: JsonPropertyName("no_lines")] bool? NoLines,
         [property: JsonPropertyName("projectile")] string Projectile,
         [property: JsonPropertyName("pid")] string ProjectileId,
-        [property: JsonPropertyName("target")] string Target,
-        [property: JsonPropertyName("x")] double X,
-        [property: JsonPropertyName("y")] double Y
-    );
+        [property: JsonPropertyName("eta")] int Eta
+    ) {
+        public TimeSpan TimeToImpact => TimeSpan.FromMilliseconds(Eta);
+    }
 
     [InboundSocketMessage("chat_log")]
     public readonly record struct ChatMessageData(
@@ -51,7 +52,8 @@ public static class Inbound {
 
     [InboundSocketMessage("death")]
     public readonly record struct DeathData(
-        [property: JsonPropertyName("id")] string Id
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("luckm")] float LuckChance
     );
 
     [InboundSocketMessage("drop")]
