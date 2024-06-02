@@ -37,6 +37,17 @@ public static class Utils {
 
     public static MapLocation GetMapLocationForSpawn(World world, string mapName, string mobName) => GetMapLocationsForSpawn(world, mapName, mobName).First();
 
+    public static MapLocation[] GetMapLocationsForSpawn(World world, string mobName) => world.Data.Maps
+        .SelectMany(x => x.Value.Monsters?
+            .Where(y => y.Type == mobName)
+            .SelectMany(y => y
+                .GetSpawnLocations()
+                .Select(z => new MapLocation(world.GetMap(z.MapName ?? x.Key), z.Location)))
+            ?? [])
+        .ToArray();
+
+    public static MapLocation GetMapLocationForSpawn(World world, string mobName) => GetMapLocationsForSpawn(world, mobName).First();
+
     public static TimeSpan SafeAbilityCd(TimeSpan time) => time.Add(TimeSpan.FromMilliseconds(100));
 
     public static MapLocation[] CalculateOptimalVisitOrder(World world, MapLocation[] points) {
