@@ -422,7 +422,7 @@ public readonly record struct PlayerBank(
         .Select(x => (x.i, x.tab!)
     );
 
-    [JsonIgnore] public int SlotsFree => ValidTabs.Sum(tab => GetFreeSlotsInTab(tab.Tab));
+    [JsonIgnore] public int SlotsFree => ValidTabs.Sum(tab => GetSlotsFreeInTab(tab.Tab));
     [JsonIgnore] public int SlotsUsed => 42 * ValidTabs.Count() - SlotsFree;
 
     public static string GetMapNameForTabIdx(int tab) {
@@ -437,7 +437,14 @@ public readonly record struct PlayerBank(
         throw new ArgumentOutOfRangeException(nameof(tab));
     }
 
-    public static int GetFreeSlotsInTab(Item?[] tab) {
+    public IEnumerable<(int Index, Item?[] Tab)> GetValidTabsForMap(string map) => 
+        ValidTabs.Where(x => GetMapNameForTabIdx(x.Index) == map);
+
+    public int GetSlotsFreeForMap(string map) => 
+        GetValidTabsForMap(map)
+        .Sum(x => GetSlotsFreeInTab(x.Tab));
+
+    public static int GetSlotsFreeInTab(Item?[] tab) {
         return 42 - tab.Count(x => x != null);
     }
 }
