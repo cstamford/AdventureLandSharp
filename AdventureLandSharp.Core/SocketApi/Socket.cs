@@ -141,6 +141,7 @@ public class Socket : IDisposable {
 
         Update_DrainRecvQueue();
         Update_PingPong();
+        Update_Resync();
         Update_Tick();
         Update_NetMovement();
     }
@@ -171,6 +172,7 @@ public class Socket : IDisposable {
     private long _pingId;
     private DateTimeOffset _pingSentAt = DateTimeOffset.UtcNow;
     private TimeSpan _latency = TimeSpan.FromMilliseconds(200);
+    private DateTimeOffset _resyncedAt = DateTimeOffset.UtcNow;
 
     private void Recv(Inbound.CorrectionData evt) {
         OnCorrection?.Invoke(evt);
@@ -336,6 +338,14 @@ public class Socket : IDisposable {
         if (now.Subtract(_pingSentAt) >= TimeSpan.FromSeconds(1)) {
             _pingSentAt = now;
             Emit<Outbound.Ping>(new(++_pingId));
+        }
+    }
+
+    private void Update_Resync() {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (now.Subtract(_resyncedAt) >= TimeSpan.FromSeconds(5)) {
+            Emit<Outbound.SendUpdates>(new());
+            _resyncedAt = now;
         }
     }
 
