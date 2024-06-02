@@ -14,7 +14,7 @@ public abstract class Entity {
     public float MaxHealth => Vitals.MaxHp;
     public float HealthPercent => Health/MaxHealth * 100;
     public float HealthMissing => MaxHealth - Health;
-    
+
     public float Mana => Vitals.Mp;
     public float MaxMana => Vitals.MaxMp;
     public float ManaPercent => Mana/MaxMana * 100;
@@ -135,14 +135,13 @@ public class Player(JsonElement source) : Entity(source) {
     public string OwnerId { get; private set; } = source.GetString("owner");
     public override Vector2 Size => new(GameConstants.PlayerWidth, GameConstants.PlayerHeight);
     public PlayerActions Actions { get; private set; } = source.TryGetProperty("c", out JsonElement c) ? c.Deserialize<PlayerActions>() : new();
+    public string Skin { get; private set; } = source.GetString("skin", string.Empty);
 
     public override void Update(JsonElement source) {
         base.Update(source);
         OwnerId = source.GetString("owner");
-
-        if (source.TryGetProperty("c", out JsonElement c)) {
-            Actions = c.Deserialize<PlayerActions>();
-        }
+        Actions = source.TryGetProperty("c", out JsonElement c) ? c.Deserialize<PlayerActions>() : Actions;
+        Skin = source.GetString("skin", Skin);
     }
 
     public override void Tick(float dt) {
