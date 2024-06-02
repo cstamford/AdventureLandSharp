@@ -141,7 +141,6 @@ public class Socket : IDisposable {
 
         Update_DrainRecvQueue();
         Update_PingPong();
-        Update_CullEntities();
         Update_Tick();
         Update_NetMovement();
     }
@@ -337,28 +336,6 @@ public class Socket : IDisposable {
         if (now.Subtract(_pingSentAt) >= TimeSpan.FromSeconds(1)) {
             _pingSentAt = now;
             Emit<Outbound.Ping>(new(++_pingId));
-        }
-    }
-
-    private void Update_CullEntities() {
-        List<string> cull = [];
-
-        foreach ((string key, Entity e) in _entities) {
-            float ex = e.Position.X;
-            float ey = e.Position.Y;
-            float px = _player.Position.X;
-            float py = _player.Position.Y;
-
-            bool cullOnX = ex < px - GameConstants.VisionWidth || ex > px + GameConstants.VisionWidth;
-            bool cullOnY = ey < py - GameConstants.VisionHeight || ey > py + GameConstants.VisionHeight;
-
-            if (cullOnX || cullOnY) {
-                cull.Add(key);
-            }
-        }
-
-        foreach (string key in cull) {
-            _entities.Remove(key);
         }
     }
 
