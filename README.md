@@ -47,6 +47,12 @@ This is the full implementation of my character's logic. To start, I recommend c
 * InfluxDB: storing metrics.
 * Redis: reading config files. See Redis below.
 
+### Grafana Configuration
+
+* A grafana dashboard is included (`grafana_dashboard.json`). It uses the InfluxDB v2.x with Flux support data source. Just import the .json into your Grafana and away you go. Note that the client will output local data to the `adventureland-debug` bucket and production to `adventureland` by default.
+
+![image](https://github.com/cstamford/AdventureLandSharp/assets/6191957/a7eec73b-b080-4587-8ca1-dab6f08bf489)
+
 ### Redis Configuration
 
 After setting up a Redis server, you will want to use database 1 (production) and database 2 (local server flow).
