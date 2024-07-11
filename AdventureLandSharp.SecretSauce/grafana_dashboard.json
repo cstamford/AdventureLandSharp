@@ -1,0 +1,2645 @@
+{
+    "__inputs": [
+      {
+        "name": "DS_ADVENTURELAND",
+        "label": "adventureland",
+        "description": "",
+        "type": "datasource",
+        "pluginId": "influxdb",
+        "pluginName": "InfluxDB"
+      },
+      {
+        "name": "DS_TELEGRAF",
+        "label": "telegraf",
+        "description": "",
+        "type": "datasource",
+        "pluginId": "influxdb",
+        "pluginName": "InfluxDB"
+      }
+    ],
+    "__elements": {},
+    "__requires": [
+      {
+        "type": "panel",
+        "id": "bargauge",
+        "name": "Bar gauge",
+        "version": ""
+      },
+      {
+        "type": "grafana",
+        "id": "grafana",
+        "name": "Grafana",
+        "version": "10.3.1"
+      },
+      {
+        "type": "datasource",
+        "id": "influxdb",
+        "name": "InfluxDB",
+        "version": "1.0.0"
+      },
+      {
+        "type": "panel",
+        "id": "piechart",
+        "name": "Pie chart",
+        "version": ""
+      },
+      {
+        "type": "panel",
+        "id": "stat",
+        "name": "Stat",
+        "version": ""
+      },
+      {
+        "type": "panel",
+        "id": "timeseries",
+        "name": "Time series",
+        "version": ""
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 4,
+          "x": 0,
+          "y": 0
+        },
+        "id": 50,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "value_and_name",
+          "wideLayout": true
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"inv_slots_free\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\"])\r\n  ",
+            "refId": "A"
+          }
+        ],
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 42
+                },
+                {
+                  "color": "green",
+                  "value": 84
+                }
+              ]
+            },
+            "unit": "short",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 4,
+          "x": 4,
+          "y": 0
+        },
+        "id": 34,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state_bank\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"bank_slots_free\")\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n  |> fill(usePrevious: true)\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        },
+        "id": 46,
+        "options": {
+          "colorMode": "none",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "sum"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"kill\")\r\n  |> filter(fn: (r) => \r\n      r[\"npc_type\"] == \"crab\" or \r\n      r[\"npc_type\"] == \"phoenix\" or \r\n      r[\"npc_type\"] == \"squig\" or \r\n      r[\"npc_type\"] == \"mvampire\" or \r\n      r[\"npc_type\"] == \"rgoo\" or\r\n      r[\"npc_type\"] == \"bgoo\" or \r\n      r[\"npc_type\"] == \"goldenbat\")\r\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n  |> keep(columns: [\"_time\", \"npc_type\"])\r\n  |> map(fn: (r) => ({ r with _value: 1 }))\r\n  |> group(columns: [\"npc_type\"])\r\n  |> aggregateWindow(every: $__interval, fn: count)\r\n\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "max": 1000,
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "rothz",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        },
+        "id": 42,
+        "interval": "5s",
+        "options": {
+          "colorMode": "none",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "value_and_name",
+          "wideLayout": true
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"tick_rate\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"avg\")\r\n  |> group(columns: [\"character\", \"_field\"])\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n  |> map(fn: (r) => ({ r with _value: 1000.0 / r._value }))\r\n\r\n  ",
+            "refId": "A"
+          }
+        ],
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 5,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "dashed"
+              }
+            },
+            "mappings": [],
+            "max": 100,
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "percent",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 0,
+          "y": 2
+        },
+        "id": 51,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"health_percent\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 5,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "dashed"
+              }
+            },
+            "mappings": [],
+            "max": 100,
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "percent",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 4,
+          "y": 2
+        },
+        "id": 52,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"mana_percent\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 100,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 8,
+          "y": 2
+        },
+        "id": 45,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"kill\")\r\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n  |> keep(columns: [\"_time\", \"npc_type\"])\r\n  |> map(fn: (r) => ({ r with _value: 1 }))\r\n  |> group(columns: [\"npc_type\"])\r\n  |> aggregateWindow(every: $__interval, fn: count)\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": true,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "percent",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 3,
+          "x": 16,
+          "y": 2
+        },
+        "id": 40,
+        "interval": "5s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket:\"telegraf\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"cpu\" and (r._field == \"usage_system\" or r._field == \"usage_user\") and r.cpu == \"cpu-total\")\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n",
+            "refId": "A"
+          }
+        ],
+        "title": "CPU",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_TELEGRAF}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "percent"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "decbytes",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 2,
+          "x": 19,
+          "y": 2
+        },
+        "id": 39,
+        "interval": "5s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_TELEGRAF}"
+            },
+            "query": "from(bucket:\"telegraf\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"mem\" and (r._field == \"active\" or r._field == \"available\"))\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n  ",
+            "refId": "A"
+          }
+        ],
+        "title": "Memory",
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "percent"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "decbytes",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 3,
+          "x": 21,
+          "y": 2
+        },
+        "id": 41,
+        "interval": "5s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket:\"telegraf\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"disk\" and (r._field == \"used\" or r._field == \"free\") and r.device == \"md3\")\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Disk",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisGridShow": false,
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "points",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 2,
+              "scaleDistribution": {
+                "log": 2,
+                "type": "log"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "max": 1000,
+            "min": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "ms",
+            "unitScale": false
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 7,
+          "w": 8,
+          "x": 16,
+          "y": 4
+        },
+        "id": 1,
+        "interval": "2s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"tick_rate\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"min\" or r[\"_field\"] == \"avg\" or r[\"_field\"] == \"max\")\r\n  |> group(columns: [\"character\", \"_field\"])\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\", \"_field\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n\r\n  ",
+            "refId": "B"
+          }
+        ],
+        "title": "Frames",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisGridShow": false,
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 8,
+          "x": 0,
+          "y": 5
+        },
+        "id": 43,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"xp\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n  |> difference()\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 2,
+          "x": 0,
+          "y": 7
+        },
+        "id": 17,
+        "options": {
+          "displayLabels": [
+            "name"
+          ],
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false,
+            "values": []
+          },
+          "pieType": "donut",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Arcanomato\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r.map }))\r\n  |> duplicate(column: \"_value\", as: \"map\")\r\n  |> group(columns: [\"map\"])\r\n  |> count()\r\n  |> group()\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 2,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "always",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 6,
+          "x": 2,
+          "y": 7
+        },
+        "id": 67,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Arcanomato\")\r\n  |> filter(fn: (r) => r[\"source\"] != \"burn\")\r\n  |> keep(columns: [\"_time\", \"_value\"])\r\n  |> aggregateWindow(every: $__interval, fn: count, createEmpty: true)\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "max": 5,
+            "min": 1,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 8,
+          "x": 8,
+          "y": 8
+        },
+        "id": 65,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"kill\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"luck_chance\")\r\n  |> keep(columns: [\"_time\", \"_value\", \"npc_type\"])\r\n  |> group(columns: [\"npc_type\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 2,
+          "x": 0,
+          "y": 10
+        },
+        "id": 54,
+        "options": {
+          "displayLabels": [
+            "name"
+          ],
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false,
+            "values": []
+          },
+          "pieType": "donut",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Arrowmato\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r.map }))\r\n  |> duplicate(column: \"_value\", as: \"map\")\r\n  |> group(columns: [\"map\"])\r\n  |> count()\r\n  |> group()\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 2,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "always",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 6,
+          "x": 2,
+          "y": 10
+        },
+        "id": 68,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Arrowmato\")\r\n  |> filter(fn: (r) => r[\"source\"] != \"burn\")\r\n  |> keep(columns: [\"_time\", \"_value\"])\r\n  |> aggregateWindow(every: $__interval, fn: count, createEmpty: true)\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "mappings": [],
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 4,
+          "x": 8,
+          "y": 10
+        },
+        "id": 61,
+        "options": {
+          "displayMode": "basic",
+          "maxVizHeight": 16,
+          "minVizHeight": 16,
+          "minVizWidth": 0,
+          "namePlacement": "left",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "sizing": "manual",
+          "text": {
+            "titleSize": 11,
+            "valueSize": 11
+          },
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"kill\")\r\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n  |> keep(columns: [\"_time\", \"npc_type\"])\r\n  |> map(fn: (r) => ({ r with _value: 1 }))\r\n  |> group(columns: [\"npc_type\"])\r\n  |> aggregateWindow(every: 1m, fn: sum, createEmpty: true)\r\n  |> fill(value: 0)\r\n  |> mean()\r\n  |> group()\r\n  |> sort(desc: true)\r\n",
+            "refId": "A"
+          }
+        ],
+        "transformations": [],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "mappings": [],
+            "min": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 4,
+          "x": 12,
+          "y": 10
+        },
+        "id": 66,
+        "interval": "10s",
+        "options": {
+          "displayMode": "basic",
+          "maxVizHeight": 16,
+          "minVizHeight": 16,
+          "minVizWidth": 0,
+          "namePlacement": "left",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showUnfilled": true,
+          "sizing": "manual",
+          "text": {
+            "titleSize": 11,
+            "valueSize": 11
+          },
+          "valueMode": "color"
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"kill\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"luck_chance\")\r\n  |> keep(columns: [\"_time\", \"_value\", \"npc_type\"])\r\n  |> group(columns: [\"npc_type\"])\r\n  |> aggregateWindow(every: 1m, fn: mean)\r\n\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "transformations": [],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisGridShow": false,
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 20,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 4,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "max": 500,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "ms",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 16,
+          "y": 11
+        },
+        "id": 64,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"ping\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\"])",
+            "refId": "A"
+          }
+        ],
+        "title": "Net (latency)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 2,
+          "x": 0,
+          "y": 13
+        },
+        "id": 55,
+        "options": {
+          "displayLabels": [
+            "name"
+          ],
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false,
+            "values": []
+          },
+          "pieType": "donut",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Ragemato\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r.map }))\r\n  |> duplicate(column: \"_value\", as: \"map\")\r\n  |> group(columns: [\"map\"])\r\n  |> count()\r\n  |> group()\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 2,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "always",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 6,
+          "x": 2,
+          "y": 13
+        },
+        "id": 69,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Ragemato\")\r\n  |> filter(fn: (r) => r[\"source\"] != \"burn\")\r\n  |> keep(columns: [\"_time\", \"_value\"])\r\n  |> aggregateWindow(every: $__interval, fn: count, createEmpty: true)\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 4,
+          "x": 16,
+          "y": 15
+        },
+        "id": 48,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true,
+            "sortBy": "Mean",
+            "sortDesc": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"net\")\r\n  |> filter(fn: (r) => r[\"direction\"] == \"incoming\")\r\n  |> group(columns: [\"event\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Net (recv) per 10s",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 4,
+          "x": 20,
+          "y": 15
+        },
+        "id": 53,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true,
+            "sortBy": "Mean",
+            "sortDesc": true
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"net\")\r\n  |> filter(fn: (r) => r[\"direction\"] == \"outgoing\")\r\n  |> group(columns: [\"event\"])\r\n  |> aggregateWindow(every: $__interval, fn: mean)\r\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Net (sent) per 10s",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 2,
+          "x": 0,
+          "y": 16
+        },
+        "id": 56,
+        "options": {
+          "displayLabels": [
+            "name"
+          ],
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false,
+            "values": []
+          },
+          "pieType": "donut",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Seamato\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r.map }))\r\n  |> duplicate(column: \"_value\", as: \"map\")\r\n  |> group(columns: [\"map\"])\r\n  |> count()\r\n  |> group()\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 2,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "always",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 6,
+          "x": 2,
+          "y": 16
+        },
+        "id": 70,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"character\"] == \"Seamato\")\r\n  |> filter(fn: (r) => r[\"source\"] != \"burn\")\r\n  |> keep(columns: [\"_time\", \"_value\"])\r\n  |> aggregateWindow(every: $__interval, fn: count, createEmpty: true)\r\n  \r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisGridShow": false,
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "dashed+area"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "max": 250,
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "#EAB839",
+                  "value": 150
+                },
+                {
+                  "color": "red",
+                  "value": 200
+                }
+              ]
+            },
+            "unit": "none",
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 2,
+          "w": 8,
+          "x": 0,
+          "y": 19
+        },
+        "id": 71,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"state\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"cc\")\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\"])\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: max)\r\n",
+            "refId": "A"
+          }
+        ],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisGridShow": false,
+              "axisLabel": "",
+              "axisPlacement": "hidden",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 15,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 2,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 8,
+          "y": 20
+        },
+        "id": 47,
+        "interval": "10s",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "multi",
+            "sort": "desc"
+          }
+        },
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: $__interval, fn: sum, createEmpty: true)\r\n  |> fill(value: 0.0)\r\n\r\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Damage per $__interval",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-RdYlGr"
+            },
+            "mappings": [],
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 0,
+          "y": 21
+        },
+        "id": 59,
+        "options": {
+          "displayMode": "basic",
+          "maxVizHeight": 300,
+          "minVizHeight": 16,
+          "minVizWidth": 0,
+          "namePlacement": "left",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "sizing": "auto",
+          "text": {
+            "titleSize": 10
+          },
+          "valueMode": "text"
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "hide": false,
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: 1s, fn: sum, createEmpty: true)\r\n  |> fill(value: 0.0)\r\n  |> mean()\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\"])\r\n  |> rename(columns: {_value: \"Avg DPS\"})\r\n",
+            "refId": "B"
+          }
+        ],
+        "transformations": [],
+        "type": "bargauge"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS_ADVENTURELAND}"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-RdYlGr"
+            },
+            "mappings": [],
+            "min": 0,
+            "noValue": "0",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unitScale": true
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 4,
+          "y": 21
+        },
+        "id": 60,
+        "options": {
+          "displayMode": "basic",
+          "maxVizHeight": 300,
+          "minVizHeight": 16,
+          "minVizWidth": 0,
+          "namePlacement": "left",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": true
+          },
+          "showUnfilled": true,
+          "sizing": "auto",
+          "text": {
+            "titleSize": 10
+          },
+          "valueMode": "text"
+        },
+        "pluginVersion": "10.3.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "${DS_ADVENTURELAND}"
+            },
+            "query": "from(bucket: \"${bucket}\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"hit\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"damage\")\r\n  |> group(columns: [\"character\"])\r\n  |> aggregateWindow(every: 1s, fn: sum, createEmpty: true)\r\n  |> fill(value: 0.0)\r\n  |> max()\r\n  |> keep(columns: [\"_time\", \"_value\", \"character\"])\r\n  |> rename(columns: {_value: \"Max DPS\"})\r\n",
+            "refId": "A"
+          }
+        ],
+        "transformations": [],
+        "type": "bargauge"
+      }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 39,
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": false,
+            "text": "adventureland",
+            "value": "adventureland"
+          },
+          "hide": 1,
+          "includeAll": false,
+          "label": "Bucket",
+          "multi": false,
+          "name": "bucket",
+          "options": [
+            {
+              "selected": true,
+              "text": "adventureland",
+              "value": "adventureland"
+            },
+            {
+              "selected": false,
+              "text": "adventureland-debug",
+              "value": "adventureland-debug"
+            }
+          ],
+          "query": "adventureland, adventureland-debug",
+          "queryValue": "",
+          "skipUrlSync": false,
+          "type": "custom"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-3h",
+      "to": "now-10s"
+    },
+    "timepicker": {
+      "hidden": false,
+      "nowDelay": "10s"
+    },
+    "timezone": "",
+    "title": "Health",
+    "uid": "a9b9d6f3-0924-4b5d-9ecc-63c5a75b3374",
+    "version": 136,
+    "weekStart": ""
+  }
