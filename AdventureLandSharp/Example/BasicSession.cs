@@ -36,7 +36,7 @@ public class BasicSession(World world, ConnectionSettings settings, CharacterFac
                 CleanUpAfterRun();
             }
 
-            Thread.Sleep(TimeSpan.FromSeconds(5));
+            Thread.Sleep(TimeSpan.FromMilliseconds(100));
         }
 
         CleanUpAfterRun();

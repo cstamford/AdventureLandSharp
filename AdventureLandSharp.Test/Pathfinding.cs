@@ -192,4 +192,17 @@ public class Pathfinding {
         Assert.IsTrue(path.Any());
     }
 
+    [TestMethod]
+    // Fails for unknown reason: only with teleport=false
+    // TODO: - Is start and end valid?
+    public void FindRoute_OddlySpecific2() {
+        Map main = InitWorld.World.GetMap("main");
+        Map cave = InitWorld.World.GetMap("cave");
+        MapLocation start = new(cave, new(-194.2369f, -1294.8788f));
+        MapLocation end = new(main, new(738.1346f, 1709.8456f));
+        IEnumerable<IMapGraphEdge> path = InitWorld.World.FindRoute(start, end, new MapGraphPathSettings() with { EnableTeleport = false });
+
+        Debug.WriteLine(string.Join('\n', path.Select(x => x.ToString())));
+        Assert.IsTrue(path.Any());
+    }
 }

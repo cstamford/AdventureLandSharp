@@ -179,7 +179,8 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
 
     public PlayerInventory Inventory { get; private set; } = source.Deserialize<PlayerInventory>();
     public PlayerEquipment Equipment { get; private set; } = source.GetProperty("slots").Deserialize<PlayerEquipment>();
-    public PlayerBank? Bank { get; private set; } = ReadPlayerBank(source);
+    public PlayerBank? Bank { get; private set; } = ReadPlayerBank(source, null);
+    public float CodeCallCost { get; private set; } = source.GetFloat("cc", 0);
 
     public override float AttackRange => base.AttackRange + ExtraRange;
 
@@ -196,7 +197,8 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         ExtraRange = source.GetFloat("xrange", ExtraRange);
         Inventory = Inventory.Update(source);
         Equipment = source.GetProperty("slots").Deserialize<PlayerEquipment>();
-        Bank = ReadPlayerBank(source);
+        Bank = ReadPlayerBank(source, Bank);
+        CodeCallCost = source.GetFloat("cc", CodeCallCost);
         GoingPosition = null; // we handle this locally, and always ignore remote
     }
 
@@ -209,18 +211,17 @@ public sealed class LocalPlayer(JsonElement source) : Player(source) {
         Vitals = Vitals with { Dead = true };
     }
 
-
     public void On(Inbound.NewMapData evt) {
         MapName = evt.MapName;
         MapId = evt.MapId;
         Position = new(evt.PlayerX, evt.PlayerY);
     }
 
-    private static PlayerBank? ReadPlayerBank(JsonElement source) {
+    private static PlayerBank? ReadPlayerBank(JsonElement source, PlayerBank? bank) {
         if (source.TryGetProperty("user", out JsonElement user) && user.ValueKind == JsonValueKind.Object) {
             return user.Deserialize<PlayerBank>();
         }
 
-        return null;
+        return bank;
     }
 }

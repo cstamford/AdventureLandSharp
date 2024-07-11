@@ -16,7 +16,8 @@ public class World {
             .Where(x => x != null)
             .ToDictionary(k => k!.Name, v => v!);
 
-        _bankLocation = GetMap("bank").DefaultSpawn;
+        _bank1Location = GetMap("bank").DefaultSpawn;
+        _bank2Location = GetMap("bank_b").DefaultSpawn;
         _upgradeLocations = new(GetMap("main"), new(-204, -129));
         _exchangeLocations = new(GetMap("main"), new(-26, -432));
         _potionLocations = [
@@ -34,7 +35,8 @@ public class World {
 
         // Add these locations as additional vertices to the graph.
         _mapsGraph = new(_maps, extraVertices: [
-            _bankLocation,
+            _bank1Location,
+            _bank2Location,
             _upgradeLocations,
             _exchangeLocations,
             .._potionLocations,
@@ -69,7 +71,8 @@ public class World {
     public Map GetMap(string mapName) => _maps[mapName];
     public bool TryGetMap(string mapName, out Map map) => _maps.TryGetValue(mapName, out map!);
 
-    public MapLocation BankLocation => _bankLocation;
+    public MapLocation BankLocationFloor1 => _bank1Location;
+    public MapLocation BankLocationFloor2 => _bank2Location;
     public MapLocation UpgradeLocations => _upgradeLocations;
     public MapLocation ExchangeLocations => _exchangeLocations;
     public MapLocation[] PotionLocations => _potionLocations;
@@ -86,7 +89,8 @@ public class World {
     private readonly MapGraph _mapsGraph;
     private readonly ConcurrentDictionary<(MapLocation, MapLocation, MapGraphPathSettings, MapGridPathSettings), List<IMapGraphEdge>> _mapsGraphCache = [];
 
-    private readonly MapLocation _bankLocation;
+    private readonly MapLocation _bank1Location;
+    private readonly MapLocation _bank2Location;
     private readonly MapLocation _upgradeLocations;
     private readonly MapLocation _exchangeLocations;
     private readonly MapLocation[] _potionLocations;

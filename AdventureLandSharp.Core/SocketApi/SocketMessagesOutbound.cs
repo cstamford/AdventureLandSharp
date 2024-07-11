@@ -101,14 +101,21 @@ public static class Outbound {
     );
 
     [OutboundSocketMessage("party")]
-    public readonly record struct PartyAccept(
+    public readonly record struct PartyInviteAccept(
+        [property: JsonPropertyName("name")] string Name)
+    {
+        [property: JsonPropertyName("event")] public string Event { get; } = "accept";
+    }
+
+    [OutboundSocketMessage("party")]
+    public readonly record struct PartyInviteAcceptRequest(
         [property: JsonPropertyName("name")] string Name)
     {
         [property: JsonPropertyName("event")] public string Event { get; } = "raccept";
     }
 
     [OutboundSocketMessage("party")]
-    public readonly record struct PartyInvite(
+    public readonly record struct PartyInviteRequest(
         [property: JsonPropertyName("name")] string Name)
     {
         [property: JsonPropertyName("event")] public string Event { get; } = "request";

@@ -37,7 +37,7 @@ public class MapConnections(string mapName, GameData gameData, GameDataMap mapDa
         foreach (JsonElement[] door in mapData.Doors) {
             string destMap = door[4].GetString()!;
 
-            if (door.Any(x => x.ValueKind == JsonValueKind.String && x.GetString()!.Contains("locked"))) {
+            if (door.Any(x => x.ValueKind == JsonValueKind.String && x.GetString()!.Contains("locked")) && destMap != "bank_b") {
                 continue; // Note: We skip locked doors.
             }
 

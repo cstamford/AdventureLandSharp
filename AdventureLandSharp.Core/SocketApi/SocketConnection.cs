@@ -163,7 +163,7 @@ public class Connection(ConnectionSettings settings) : IDisposable {
 
         try {
             _socketIo?.DisconnectAsync();
-            Thread.Sleep(TimeSpan.FromSeconds(1));
+            Thread.Sleep(TimeSpan.FromMilliseconds(100));
             _socketIo?.Dispose();
         } catch (Exception e) {
             _log.Error($"Error disposing _socketIo: {e}");

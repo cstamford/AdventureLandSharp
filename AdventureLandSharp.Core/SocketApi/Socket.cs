@@ -21,6 +21,7 @@ public class Socket : IDisposable {
     public event Action<Inbound.HitData>? OnHit;
     public event Action<Inbound.MagiportRequestData>? OnMagiportRequest;
     public event Action<Inbound.NewMapData>? OnNewMap;
+    public event Action<Inbound.PartyInviteData>? OnPartyInvite;
     public event Action<Inbound.PartyRequestData>? OnPartyRequest;
     public event Action<JsonElement>? OnPlayer;
     public event Action<Inbound.ServerInfo>? OnServerInfo;
@@ -266,6 +267,10 @@ public class Socket : IDisposable {
 
     private void Recv(Inbound.PartyUpdateData evt) {
         _party = evt.Members ?? [];
+    }
+
+    private void Recv(Inbound.PartyInviteData evt) {
+        OnPartyInvite?.Invoke(evt);
     }
 
     private void Recv(Inbound.PartyRequestData evt) {
