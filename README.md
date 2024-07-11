@@ -17,6 +17,8 @@ There is a full game implementation in `AdventureLandSharp.SecretSauce/*.cs`. Ma
 1. On architecture/thread safety: Each character runs on its own thread. You can access a character's data safely using the OnTick. Characters communicate through the event bus, not directly, to simplify thread safety.
 2. On TODOs/hardcoded: there are some instances where things such as character names are hardcoded. Make sure to explore the code. Pro-tip: search for "mato" and you'll probably find everything.
 
+There are some helper scripts for the vanilla JS client in `js_reference/*`, mostly related to crafting. You need to run `npm build` to do the TypeScript -> JavaScript conversion.
+
 ## Project Structure
 
 1. **AdventureLandSharp**: This is a headless client per the above description.

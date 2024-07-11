@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.2",
+    "typed-adventureland": "^0.0.44",
+    "typescript": "^5.4.3"
+  }
+}
