@@ -12,19 +12,147 @@ If you just want to dive right in, start by reading `AdventureLandSharp/Example/
 
 A note on socket APIs: Many of them are scaffolded, but not yet implemented. You may find yourself needing to extend `AdventureLandSharp.Core.SocketApi`.
 
-There is a full game implementation in `AdventureLandSharp.SecretSauce/*.cs`. Make sure to edit every variable starting with CREDENTIAL_ if you want it to run.
-
-1. On architecture/thread safety: Each character runs on its own thread. You can access a character's data safely using the OnTick. Characters communicate through the event bus, not directly, to simplify thread safety.
-2. On TODOs/hardcoded: there are some instances where things such as character names are hardcoded. Make sure to explore the code. Pro-tip: search for "mato" and you'll probably find everything.
-
-There are some helper scripts for the vanilla JS client in `js_reference/*`, mostly related to crafting. You need to run `npm build` to do the TypeScript -> JavaScript conversion.
-
-## Project Structure
+### Project Structure
 
 1. **AdventureLandSharp**: This is a headless client per the above description.
 2. **AdventureLandSharp.Core**: This project contains all of the core functionality. Things like the socket communication/persistence layer, or the HTTP communication layer, parsing game data, or implementations of various key algorithms like pathfinding.
-3. **AdventureLandSharp.WebAPI**: This implements a basic REST API over some of the core functionality. 
+3. **AdventureLandSharp.Data**: For now, mostly empty tool to perform data processing. Architecturally intended to be a codegen layer from gamedata.js -> C# bindings for all data.
+4. **AdventureLandSharp.SecretSauce**: Full game implementation I used for my characters. See below for more info.
+5. **AdventureLandSharp.Test**: Unit tests.
+6. **AdventureLandSharp.WebAPI**: This implements a basic REST API over some of the core functionality.
+7. **js_reference**: TypeScript helpers for vanilla JS client, mostly related to crafting. You need to run `npm build` to do the TypeScript -> JavaScript conversion.
 
-## Contributing
+## SecretSauce (full game implementation)
 
-PRs are welcome. Please follow the existing style.
+There is a full game implementation in `AdventureLandSharp.SecretSauce/*.cs`.
+
+### External Dependencies
+
+1. InfluxDB: storing metrics.
+2. Redis: reading config files. See Redis below.
+
+### Redis Configuration
+
+After setting up a Redis server, you will want to use database 1 (production) and database 2 (local server flow).
+
+1. Create the `v2_config` key with the following structure, one line per character:
+
+```json
+[
+    "Arcanomato",
+    "Ragemato",
+    "Seamato",
+    "Sneakmato"
+]
+```
+
+2. Create one key per character (example: `v2_config_arcanomato`):
+
+```json
+{
+    "partyLeader": "Arcanomato",
+    "partyLeaderFollowDist": null,
+    "partyLeaderAssist": null,
+    "destroyItemsData": [],
+    "keepItemsData": [
+        "goldbooster",
+        "luckbooster",
+        "xpbooster",
+        "tracker"
+    ],
+    "sellItemsData": [
+        "cclaw",
+        "hpamulet",
+        "hpbelt",
+        "mushroomstaff",
+        "ringsj",
+        "slimestaff",
+        "stinger",
+        "vitearring",
+        "vitscroll",
+        "whiteegg"
+    ],
+    "targetsData": {
+        "cutebee": 100,
+        "goblin": 100,
+        "goldenbat": 100,
+        "rgoo": 50,
+        "snowman": 50,
+        "wabbit": 50,
+        "bgoo": 35,
+        "greenjr": 30,
+        "jr": 30,
+        "fvampire": 28,
+        "mvampire": 27,
+        "phoenix": 26,
+        "frog": 25,
+        "squig": 6,
+        "squigtoad": 5,
+        "crab": 4,
+        "crabxx": -1,
+        "dragold": -1,
+        "franky": -1,
+        "grinch": -1,
+        "icegolem": -1,
+        "mrgreen": -1,
+        "mrpumpkin": -1,
+        "pinkgoo": -1,
+        "tiger": -1,
+        "puppy1": -1,
+        "puppy2": -1,
+        "puppy3": -1,
+        "puppy4": -1,
+        "kitty1": -1,
+        "kitty2": -1,
+        "kitty3": -1,
+        "kitty4": -1,
+        "target": -1,
+        "target_a500": -1,
+        "target_a750": -1,
+        "target_r500": -1,
+        "target_r750": -1,
+        "target_ar900": -1,
+        "target_ar500red": -1
+    },
+    "healthPotion": "hpot1",
+    "manaPotion": "mpot1",
+    "elixir": "elixirint2",
+    "tradeTargetsItems": [
+        "Seamato"
+    ],
+    "tradeTargetsGold": [
+        "Seamato"
+    ],
+    "shouldLoot": true,
+    "shouldUsePassiveRestore": false,
+    "shouldHuntPriorityMobs": true,
+    "shouldAcceptMagiport": true,
+    "shouldDoEvents": true,
+    "blendTargets": [
+        "phoenix",
+        "kitty1",
+        "kitty2",
+        "kitty3",
+        "kitty4",
+        "kitty5"
+    ]
+}
+```
+
+Non-obvious config explanations:
+
+`partyLeaderFollowDist`: Clamp valid positions within (ex: 150) units of the leader.
+`partyLeaderAssist`: Only attack this person's target when they're around.
+`shouldUsePassiveRestore`: Whether to ever use the 4-second CD recovery abilities.
+`shouldHuntPriorityMobs`: When a character passes a mob, they annouce it to the other characters. If another character spots a mob that you have flagged as a priority, should you go to it?
+`blendTargets`: List of valid monsters for you to blend (e.g. steal the skin of).
+
+### Other Notes
+
+1. Make sure to edit every variable starting with CREDENTIAL_ if you want it to run.
+2. Architecture/thread safety: Each character runs on its own thread. You can access a character's data safely using the OnTick. Characters communicate through the event bus, not directly, to simplify thread safety.
+3. TODOs/hardcoded: there are some instances where things such as character names are hardcoded. Make sure to explore the code. Pro-tip: search for "mato" and you'll probably find everything.
+4. Search for "bank" and "bank_b" and make sure to update these to reflect your character's current bank access (1/2/3 floors).
+5. Config updates live, so you can easily edit using something like Another Redis Desktop Manager to log characters on/off and tweak their config without a restart.
+6. Code has been tested most on Debian 12 / x64 / .NET 9 preview.
+7. `smap_data.json` is extracted dumped from the running server. If you search the Discord, you might find instructions, but honestly just search for `smap` in the server code and dump the obvious. It will work without, but start-up will take longer and paths will generate with fewer shortcuts.
