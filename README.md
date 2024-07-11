@@ -6,30 +6,38 @@ This is a headless C# client for [AdventureLand](https://adventure.land/). The d
 
 If you just want to dive right in, start by reading `AdventureLandSharp/Example/*.cs`. There are three key components:
 
-1. SessionCoordinator: This handles deciding which sessions should be running at any given time. The example coordinator will cycle through characters on a timer.
-2. Session: This handles one individual session, where a session is defined as the whole 'interaction' between the client and the AL server. The example session will establish a connection, create and simulate a character, and handle reconnections if the connection drops.
-3. Character: This handles the simulation logic of the character. The example character will roam the world, drinking potions as appropriate, and attacking anything in range.
+* `SessionCoordinator`: This handles deciding which sessions should be running at any given time. The example coordinator will cycle through characters on a timer.
+* `Session`: This handles one individual session, where a session is defined as the whole 'interaction' between the client and the AL server. The example session will establish a connection, create and simulate a character, and handle reconnections if the connection drops.
+* `Character`: This handles the simulation logic of the character. The example character will roam the world, drinking potions as appropriate, and attacking anything in range.
 
 A note on socket APIs: Many of them are scaffolded, but not yet implemented. You may find yourself needing to extend `AdventureLandSharp.Core.SocketApi`.
 
 ### Project Structure
 
-1. **AdventureLandSharp**: This is a headless client per the above description.
-2. **AdventureLandSharp.Core**: This project contains all of the core functionality. Things like the socket communication/persistence layer, or the HTTP communication layer, parsing game data, or implementations of various key algorithms like pathfinding.
-3. **AdventureLandSharp.Data**: For now, mostly empty tool to perform data processing. Architecturally intended to be a codegen layer from gamedata.js -> C# bindings for all data.
-4. **AdventureLandSharp.SecretSauce**: Full game implementation I used for my characters. See below for more info.
-5. **AdventureLandSharp.Test**: Unit tests.
-6. **AdventureLandSharp.WebAPI**: This implements a basic REST API over some of the core functionality.
-7. **js_reference**: TypeScript helpers for vanilla JS client, mostly related to crafting. You need to run `npm build` to do the TypeScript -> JavaScript conversion.
+* `AdventureLandSharp`: This is a headless client per the above description.
+* `AdventureLandSharp.Core`: This project contains all of the core functionality. Things like the socket communication/persistence layer, or the HTTP communication layer, parsing game data, or implementations of various key algorithms like pathfinding.
+* `AdventureLandSharp.Data`: For now, mostly empty tool to perform data processing. Architecturally intended to be a codegen layer from gamedata.js -> C# bindings for all data.
+* `AdventureLandSharp.SecretSauce`: Full game implementation I used for my characters. See below for more info.
+* `AdventureLandSharp.Test`: Unit tests.
+* `AdventureLandSharp.WebAPI`: This implements a basic REST API over some of the core functionality.
+* `js_reference`: TypeScript helpers for vanilla JS client, mostly related to crafting. You need to run `npm build` to do the TypeScript -> JavaScript conversion.
 
 ## SecretSauce (full game implementation)
 
-There is a full game implementation in `AdventureLandSharp.SecretSauce/*.cs`.
+This is the full implementation of my character's logic. To start, I recommend checking:
+
+* `Session.cs`: each character has their own session which controls lifetime of the character.
+* `SessionCoordinator.cs`: coordinator determines which characters/sessions should run, and constructs them.
+* `SessionEventBus.cs`: event bus enables communication between characters.
+* `Character/CharacterBase*.cs`: base class, shared code for all characters.
+* `Classes/*.cs`: one or more for each character class.
+* `Tactics/HighValue_PinkGoblin.cs`: small example showing how advanced combat code can be written.
+* `Strategy/HighValue_PhoenixScout.cs`: small example showing how advanced travel code can be written.
 
 ### External Dependencies
 
-1. InfluxDB: storing metrics.
-2. Redis: reading config files. See Redis below.
+* InfluxDB: storing metrics.
+* Redis: reading config files. See Redis below.
 
 ### Redis Configuration
 
@@ -141,18 +149,18 @@ After setting up a Redis server, you will want to use database 1 (production) an
 
 Non-obvious config explanations:
 
-`partyLeaderFollowDist`: Clamp valid positions within (ex: 150) units of the leader.
-`partyLeaderAssist`: Only attack this person's target when they're around.
-`shouldUsePassiveRestore`: Whether to ever use the 4-second CD recovery abilities.
-`shouldHuntPriorityMobs`: When a character passes a mob, they annouce it to the other characters. If another character spots a mob that you have flagged as a priority, should you go to it?
-`blendTargets`: List of valid monsters for you to blend (e.g. steal the skin of).
+* `partyLeaderFollowDist`: Clamp valid positions within (ex: 150) units of the leader.
+* `partyLeaderAssist`: Only attack this person's target when they're around.
+* `shouldUsePassiveRestore`: Whether to ever use the 4-second CD recovery abilities.
+* `shouldHuntPriorityMobs`: When a character passes a mob, they annouce it to the other characters. If another character spots a mob that you have flagged as a priority, should you go to it?
+* `blendTargets`: List of valid monsters for you to blend (e.g. steal the skin of).
 
 ### Other Notes
 
-1. Make sure to edit every variable starting with CREDENTIAL_ if you want it to run.
-2. Architecture/thread safety: Each character runs on its own thread. You can access a character's data safely using the OnTick. Characters communicate through the event bus, not directly, to simplify thread safety.
-3. TODOs/hardcoded: there are some instances where things such as character names are hardcoded. Make sure to explore the code. Pro-tip: search for "mato" and you'll probably find everything.
-4. Search for "bank" and "bank_b" and make sure to update these to reflect your character's current bank access (1/2/3 floors).
-5. Config updates live, so you can easily edit using something like Another Redis Desktop Manager to log characters on/off and tweak their config without a restart.
-6. Code has been tested most on Debian 12 / x64 / .NET 9 preview.
-7. `smap_data.json` is extracted dumped from the running server. If you search the Discord, you might find instructions, but honestly just search for `smap` in the server code and dump the obvious. It will work without, but start-up will take longer and paths will generate with fewer shortcuts.
+* Make sure to edit every variable starting with CREDENTIAL_ if you want it to run.
+* Architecture/thread safety: Each character runs on its own thread. You can access a character's data safely using the OnTick. Characters communicate through the event bus, not directly, to simplify thread safety.
+* TODOs/hardcoded: there are some instances where things such as character names are hardcoded. Make sure to explore the code. Pro-tip: search for "mato" and you'll probably find everything.
+* Search for "bank" and "bank_b" and make sure to update these to reflect your character's current bank access (1/2/3 floors).
+* Config updates live, so you can easily edit using something like Another Redis Desktop Manager to log characters on/off and tweak their config without a restart.
+* Code has been tested most on Debian 12 / x64 / .NET 9 preview.
+* `smap_data.json` is extracted dumped from the running server. If you search the Discord, you might find instructions, but honestly just search for `smap` in the server code and dump the obvious. It will work without, but start-up will take longer and paths will generate with fewer shortcuts.
