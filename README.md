@@ -22,6 +22,14 @@ A note on socket APIs: Many of them are scaffolded, but not yet implemented. You
 * `AdventureLandSharp.WebAPI`: This implements a basic REST API over some of the core functionality.
 * `js_reference`: TypeScript helpers for vanilla JS client, mostly related to crafting. You need to run `npm build` to do the TypeScript -> JavaScript conversion.
 
+### Enviroment Variables
+
+* `ADVENTURELAND_LOG_DIR`: Obvious. Just the path to the directory you want logs stored. File name is in `log_yyyy-MM-dd_HH-mm-ss.txt`.
+* `ADVENTURELAND_LOG_LEVEL`: Log level for the file above.
+* `ADVENTURELAND_LOG_LEVEL_CONSOLE`: Log level for console / stdout.
+
+Consult `AdventureLandSharp.Core\Util\Log.cs` for valid log levels. Log level is passed here verbatim.
+
 ## SecretSauce (full game implementation)
 
 This is the full implementation of my character's logic. To start, I recommend checking:
@@ -154,6 +162,11 @@ Non-obvious config explanations:
 * `shouldUsePassiveRestore`: Whether to ever use the 4-second CD recovery abilities.
 * `shouldHuntPriorityMobs`: When a character passes a mob, they annouce it to the other characters. If another character spots a mob that you have flagged as a priority, should you go to it?
 * `blendTargets`: List of valid monsters for you to blend (e.g. steal the skin of).
+
+### How do I expand sockets?
+
+* Cross-reference with AL server code.
+* Check log output. Verbose will dump any unrecognised socket events and VeryVerbose will dump everything.
 
 ### Other Notes
 
